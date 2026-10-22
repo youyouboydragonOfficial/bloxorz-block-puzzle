@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Rolling Block 3D - ©youyouboydragon</title>
+  <link rel="stylesheet" href="./src/styles.css">
+</head>
+<body>
+  <div id="app-container">
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- UI Overlay Layer -->
+    <div class="ui-layer">
+      <!-- Top HUD -->
+      <div class="top-hud interactive">
+        <div class="hud-left">
+          <div class="game-title">ROLLING BLOCK 3D</div>
+          <div class="level-badge" id="hud-level-number">STAGE 1 / 1000</div>
+          <div class="level-name" id="hud-level-name">覚醒の道 (First Steps)</div>
+        </div>
+
+        <div class="hud-stats">
+          <div class="stat-box">
+            <div class="stat-label">MOVES</div>
+            <div class="stat-value" id="hud-move-count">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">BLOCK</div>
+            <div class="stat-value" id="hud-block-type">1x1x2</div>
+          </div>
+        </div>
+
+        <div class="hud-buttons">
+          <button class="icon-btn" id="btn-restart" title="リトライ (R)">🔄</button>
+          <button class="icon-btn" id="btn-select-stage" title="ステージ選択">📋</button>
+          <button class="icon-btn" id="btn-sound" title="サウンド切り替え">🔊</button>
+          <button class="icon-btn" id="btn-check-update" title="アプリアップデート確認">🚀</button>
+        </div>
+      </div>
+
+      <!-- Bottom Controls & Copyright -->
+      <div class="bottom-controls">
+        <div class="copyright-tag">
+          <span>ROLLING BLOCK 3D</span> | ©youyouboydragon
+        </div>
+
+        <!-- Touch D-Pad for Mobile -->
+        <div class="dpad-container interactive">
+          <button class="dpad-btn dpad-up" id="dpad-up">▲</button>
+          <button class="dpad-btn dpad-left" id="dpad-left">◀</button>
+          <div class="dpad-btn dpad-center">ROLL</div>
+          <button class="dpad-btn dpad-right" id="dpad-right">▶</button>
+          <button class="dpad-btn dpad-down" id="dpad-down">▼</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Clear Modal -->
+    <div class="modal-overlay hidden" id="modal-clear">
+      <div class="modal-card">
+        <div class="modal-title">STAGE CLEAR!</div>
+        <div class="modal-subtitle" id="clear-message">見事にゴールへ到達しました！</div>
+        <div class="stat-box" style="margin: 10px 0;">
+          <div class="stat-label">TOTAL MOVES</div>
+          <div class="stat-value" id="clear-moves-count">12</div>
+        </div>
+        <button class="btn-primary" id="btn-next-level">次のステージへ</button>
+        <button class="btn-secondary" id="btn-clear-retry">もう一度遊ぶ</button>
+      </div>
+    </div>
+
+    <!-- Stage Select Modal -->
+    <div class="modal-overlay hidden" id="modal-stage-select">
+      <div class="modal-card" style="max-width: 520px;">
+        <div class="modal-title">STAGE SELECT</div>
+        <div class="modal-subtitle">全1000ステージから選択できます</div>
+        
+        <div class="level-search-row">
+          <input type="number" id="input-jump-level" class="level-input" placeholder="ステージ番号 (1-1000)" min="1" max="1000">
+          <button class="btn-primary" id="btn-jump-level" style="padding: 8px 16px;">移動</button>
+        </div>
+
+        <div class="level-grid" id="stage-grid">
+          <!-- Dynamic level buttons -->
+        </div>
+
+        <div style="display: flex; gap: 8px; justify-content: center;">
+          <button class="btn-secondary" id="btn-stage-prev-page">◀ 前の20</button>
+          <button class="btn-secondary" id="btn-stage-next-page">次の20 ▶</button>
+        </div>
+
+        <button class="btn-secondary" id="btn-close-stage-select">閉じる</button>
+      </div>
+    </div>
+
+    <!-- 3-Second Update Scanner Modal -->
+    <div class="modal-overlay hidden" id="modal-scan">
+      <div class="modal-card">
+        <div class="modal-title">UPDATE CHECK</div>
+        <div class="scanner-graphic">
+          <div class="scanner-radar"></div>
+        </div>
+        <div class="scan-status-text" id="scan-status-text">GitHub サーバーへ接続中...</div>
+        <div class="modal-subtitle">最新バージョンの整合性を確認しています</div>
+        <div style="font-size: 11px; color: var(--text-muted);">©youyouboydragon Release System</div>
+      </div>
+    </div>
+
+    <!-- Update Dialog Modal -->
+    <div class="modal-overlay hidden" id="modal-update">
+      <div class="modal-card">
+        <div class="modal-title">新バージョンが利用可能です！</div>
+        <div class="modal-subtitle">
+          現在のバージョン: <span id="update-current-ver" style="color: #fff;">v1.0.0</span> ➔ 
+          <span id="update-new-ver" style="color: var(--accent-cyan); font-weight: bold;">v1.0.1</span>
+        </div>
+        
+        <div class="stat-box" style="margin: 4px 0;">
+          <div class="stat-label">予想ダウンロード容量</div>
+          <div class="stat-value" id="update-size">5.8 MB</div>
+        </div>
+
+        <div style="text-align: left; font-size: 12px; color: var(--text-muted); margin-top: 4px;">更新内容 (改善点・新機能):</div>
+        <div class="changelog-box">
+          <ul id="update-changelog">
+            <!-- Changelog items -->
+          </ul>
+        </div>
+
+        <button class="btn-primary" id="btn-start-download">今すぐ更新をダウンロード</button>
+        <button class="btn-secondary" id="btn-close-update">あとで</button>
+      </div>
+    </div>
+
+    <!-- Download Progress Modal -->
+    <div class="modal-overlay hidden" id="modal-download">
+      <div class="modal-card">
+        <div class="modal-title">DOWNLOADING UPDATE</div>
+        <div class="modal-subtitle" id="download-status-text">最新パッケージを受信中...</div>
+        
+        <div class="download-bar-container">
+          <div class="download-bar-fill" id="download-bar-fill"></div>
+        </div>
+
+        <div class="download-meta">
+          <span id="download-percent">0%</span>
+          <span id="download-counter">0.0 MB / 5.8 MB</span>
+          <span id="download-speed">2.4 MB/s</span>
+        </div>
+
+        <button class="btn-primary hidden" id="btn-download-action" style="margin-top: 10px;">最新版をインストール</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

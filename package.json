@@ -1,0 +1,22 @@
+{
+  "name": "bloxorz-block-puzzle",
+  "version": "1.0.0",
+  "description": "3D Rolling Block Puzzle Game by youyouboydragon",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "cap:sync": "cap sync",
+    "cap:open": "cap open android"
+  },
+  "dependencies": {
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "vite": "^6.0.0"
+  }
+}

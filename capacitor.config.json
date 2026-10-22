@@ -1,0 +1,9 @@
+{
+  "appId": "com.youyouboydragon.rollingblock",
+  "appName": "Rolling Block 3D",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  }
+}
