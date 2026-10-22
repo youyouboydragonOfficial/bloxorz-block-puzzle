@@ -3,21 +3,70 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Rolling Block 3D - ©youyouboydragon</title>
+  <title>ROLLING BLOCK 3D - Official Block Rolling Puzzle ©youyouboydragon</title>
   <link rel="stylesheet" href="./src/styles.css">
 </head>
 <body>
   <div id="app-container">
-    <!-- 3D WebGL Canvas Container -->
+    <!-- 3D WebGL Canvas -->
     <div id="canvas-container"></div>
 
-    <!-- UI Overlay Layer -->
-    <div class="ui-layer">
+    <!-- HOME / TITLE SCREEN (起動時公式ホーム画面) -->
+    <div class="screen-overlay" id="screen-home">
+      <div class="home-card">
+        <div class="home-badge">OFFICIAL PUZZLE GAME</div>
+        <h1 class="home-title">ROLLING BLOCK 3D</h1>
+        <p class="home-subtitle">直方体ブロックを転がして光るネオンゴールを目指せ</p>
+
+        <div class="home-menu-buttons">
+          <button class="btn-primary-large" id="btn-home-play">
+            <span class="btn-icon">▶</span>
+            <div class="btn-text-group">
+              <span class="btn-main-text">ゲームスタート</span>
+              <span class="btn-sub-text" id="home-resume-label">STAGE 1 からプレイ</span>
+            </div>
+          </button>
+
+          <button class="btn-gold" id="btn-home-tutorial">
+            <span class="btn-icon">📖</span>
+            <span class="btn-main-text">あそびかた (チュートリアル)</span>
+          </button>
+
+          <button class="btn-menu" id="btn-home-stages">
+            <span class="btn-icon">📋</span>
+            <span class="btn-main-text">ステージ選択 (全1000ステージ)</span>
+          </button>
+
+          <!-- 目立つ大きなアプリ更新確認ボタン -->
+          <button class="btn-update-special" id="btn-home-update">
+            <span class="btn-icon">🔄</span>
+            <div class="btn-text-group">
+              <span class="btn-main-text">アプリの更新を確認</span>
+              <span class="btn-sub-text">最新バージョン (GitHub Releases) を照会</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="home-footer">
+          <div class="home-sound-toggle">
+            <button class="icon-btn-small" id="btn-home-sound">🔊 BGM/効果音: ON</button>
+          </div>
+          <div class="home-copyright">
+            ROLLING BLOCK 3D | <strong>©youyouboydragon</strong> All Rights Reserved.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- IN-GAME HUD LAYER (ゲームプレイ中のUI) -->
+    <div class="ui-layer hidden" id="screen-game">
       <!-- Top HUD -->
       <div class="top-hud interactive">
         <div class="hud-left">
-          <div class="game-title">ROLLING BLOCK 3D</div>
-          <div class="level-badge" id="hud-level-number">STAGE 1 / 1000</div>
+          <div class="hud-nav-row">
+            <button class="icon-btn-nav" id="btn-back-home" title="タイトルへ戻る">🏠</button>
+            <div class="level-badge" id="hud-level-number">STAGE 1 / 1000</div>
+          </div>
           <div class="level-name" id="hud-level-name">覚醒の道 (First Steps)</div>
         </div>
 
@@ -32,28 +81,75 @@
           </div>
         </div>
 
-        <div class="hud-buttons">
-          <button class="icon-btn" id="btn-restart" title="リトライ (R)">🔄</button>
-          <button class="icon-btn" id="btn-select-stage" title="ステージ選択">📋</button>
-          <button class="icon-btn" id="btn-sound" title="サウンド切り替え">🔊</button>
-          <button class="icon-btn" id="btn-check-update" title="アプリアップデート確認">🚀</button>
+        <div class="hud-actions">
+          <!-- 3Dプレビューモード & 正面リセット切り替えボタン -->
+          <button class="mode-toggle-btn" id="btn-toggle-mode" title="3D視点確認 / 操作切り替え">
+            <span id="mode-icon">👁</span>
+            <span id="mode-text">視点確認</span>
+          </button>
+          <button class="icon-btn" id="btn-reset-cam" title="正面アングルに戻す">🎯</button>
+          <button class="icon-btn" id="btn-restart" title="最初からリトライ (R)">🔄</button>
+          <button class="icon-btn" id="btn-game-update" title="アプリアップデート確認">⚡更新</button>
         </div>
       </div>
 
-      <!-- Bottom Controls & Copyright -->
+      <!-- 視点確認モード案内バナー -->
+      <div class="preview-mode-banner hidden" id="preview-banner">
+        <span>👁 3D視点確認モード中: 画面をドラッグして360度観察できます</span>
+        <button class="btn-return-play" id="btn-banner-return">🎮 操作に戻る</button>
+      </div>
+
+      <!-- 方位コンパス表示 (正面ガイド) -->
+      <div class="compass-hud">
+        <div class="compass-needle">▲</div>
+        <div class="compass-label">FRONT (正面)</div>
+      </div>
+
+      <!-- Bottom Controls & Mobile D-Pad -->
       <div class="bottom-controls">
         <div class="copyright-tag">
           <span>ROLLING BLOCK 3D</span> | ©youyouboydragon
         </div>
 
-        <!-- Touch D-Pad for Mobile -->
-        <div class="dpad-container interactive">
-          <button class="dpad-btn dpad-up" id="dpad-up">▲</button>
-          <button class="dpad-btn dpad-left" id="dpad-left">◀</button>
-          <div class="dpad-btn dpad-center">ROLL</div>
-          <button class="dpad-btn dpad-right" id="dpad-right">▶</button>
-          <button class="dpad-btn dpad-down" id="dpad-down">▼</button>
+        <!-- Touch D-Pad for Mobile (カメラ正面に完全同期) -->
+        <div class="dpad-container interactive" id="dpad-container">
+          <button class="dpad-btn dpad-up" id="dpad-up" title="奥へ転がる">▲</button>
+          <button class="dpad-btn dpad-left" id="dpad-left" title="左へ転がる">◀</button>
+          <div class="dpad-btn dpad-center" id="dpad-center">ROLL</div>
+          <button class="dpad-btn dpad-right" id="dpad-right" title="右へ転がる">▶</button>
+          <button class="dpad-btn dpad-down" id="dpad-down" title="手前へ転がる">▼</button>
         </div>
+      </div>
+    </div>
+
+    <!-- TUTORIAL MODAL (公式チュートリアル) -->
+    <div class="modal-overlay hidden" id="modal-tutorial">
+      <div class="modal-card modal-card-wide">
+        <div class="modal-title">📖 あそびかた (TUTORIAL)</div>
+        <div class="tutorial-slider">
+          <div class="tutorial-slide" id="tut-slide">
+            <div class="tut-icon" id="tut-icon">🕹</div>
+            <div class="tut-headline" id="tut-headline">1. ブロックの基本動作</div>
+            <div class="tut-desc" id="tut-desc">
+              画面の矢印キー、スワイプ、または画面下の十字キーでブロックを転がします。<br>
+              ブロックは転がる向きに応じて、<strong>「立っている状態（1x1x2）」</strong>と<strong>「横倒しの状態（2x1x1）」</strong>に滑らかに姿勢変化します。
+            </div>
+          </div>
+        </div>
+
+        <div class="tut-pagination">
+          <span class="dot active"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+
+        <div class="tut-nav-buttons">
+          <button class="btn-secondary" id="btn-tut-prev">◀ 前へ</button>
+          <button class="btn-primary" id="btn-tut-next">次へ ▶</button>
+        </div>
+        <button class="btn-secondary" id="btn-close-tutorial" style="margin-top: 8px;">閉じる</button>
       </div>
     </div>
 
@@ -61,29 +157,29 @@
     <div class="modal-overlay hidden" id="modal-clear">
       <div class="modal-card">
         <div class="modal-title">STAGE CLEAR!</div>
-        <div class="modal-subtitle" id="clear-message">見事にゴールへ到達しました！</div>
-        <div class="stat-box" style="margin: 10px 0;">
+        <div class="modal-subtitle">見事にゴールへ到達しました！</div>
+        <div class="stat-box" style="margin: 12px 0;">
           <div class="stat-label">TOTAL MOVES</div>
-          <div class="stat-value" id="clear-moves-count">12</div>
+          <div class="stat-value" id="clear-moves-count">0</div>
         </div>
-        <button class="btn-primary" id="btn-next-level">次のステージへ</button>
+        <button class="btn-primary" id="btn-next-level">次のステージへ ▶</button>
         <button class="btn-secondary" id="btn-clear-retry">もう一度遊ぶ</button>
       </div>
     </div>
 
     <!-- Stage Select Modal -->
     <div class="modal-overlay hidden" id="modal-stage-select">
-      <div class="modal-card" style="max-width: 520px;">
+      <div class="modal-card modal-card-wide">
         <div class="modal-title">STAGE SELECT</div>
         <div class="modal-subtitle">全1000ステージから選択できます</div>
         
         <div class="level-search-row">
           <input type="number" id="input-jump-level" class="level-input" placeholder="ステージ番号 (1-1000)" min="1" max="1000">
-          <button class="btn-primary" id="btn-jump-level" style="padding: 8px 16px;">移動</button>
+          <button class="btn-primary" id="btn-jump-level">移動</button>
         </div>
 
         <div class="level-grid" id="stage-grid">
-          <!-- Dynamic level buttons -->
+          <!-- Dynamic stage items -->
         </div>
 
         <div style="display: flex; gap: 8px; justify-content: center;">
@@ -95,7 +191,7 @@
       </div>
     </div>
 
-    <!-- 3-Second Update Scanner Modal -->
+    <!-- 3-Second Update Scanner Modal (必ず3秒間スキャン) -->
     <div class="modal-overlay hidden" id="modal-scan">
       <div class="modal-card">
         <div class="modal-title">UPDATE CHECK</div>
@@ -103,12 +199,12 @@
           <div class="scanner-radar"></div>
         </div>
         <div class="scan-status-text" id="scan-status-text">GitHub サーバーへ接続中...</div>
-        <div class="modal-subtitle">最新バージョンの整合性を確認しています</div>
-        <div style="font-size: 11px; color: var(--text-muted);">©youyouboydragon Release System</div>
+        <div class="modal-subtitle">最新リリースの暗号化ハッシュを検証しています (3秒間照会)</div>
+        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">©youyouboydragon Release System</div>
       </div>
     </div>
 
-    <!-- Update Dialog Modal -->
+    <!-- Update Dialog Modal (予想容量と改善点・新機能の表示) -->
     <div class="modal-overlay hidden" id="modal-update">
       <div class="modal-card">
         <div class="modal-title">新バージョンが利用可能です！</div>
@@ -117,15 +213,15 @@
           <span id="update-new-ver" style="color: var(--accent-cyan); font-weight: bold;">v1.0.1</span>
         </div>
         
-        <div class="stat-box" style="margin: 4px 0;">
+        <div class="stat-box" style="margin: 6px 0;">
           <div class="stat-label">予想ダウンロード容量</div>
-          <div class="stat-value" id="update-size">5.8 MB</div>
+          <div class="stat-value" id="update-size">4.3 MB</div>
         </div>
 
         <div style="text-align: left; font-size: 12px; color: var(--text-muted); margin-top: 4px;">更新内容 (改善点・新機能):</div>
         <div class="changelog-box">
           <ul id="update-changelog">
-            <!-- Changelog items -->
+            <!-- Dynamic Changelog -->
           </ul>
         </div>
 
@@ -134,7 +230,7 @@
       </div>
     </div>
 
-    <!-- Download Progress Modal -->
+    <!-- Download Progress Modal (クールなダウンロードアニメーション) -->
     <div class="modal-overlay hidden" id="modal-download">
       <div class="modal-card">
         <div class="modal-title">DOWNLOADING UPDATE</div>
@@ -146,11 +242,11 @@
 
         <div class="download-meta">
           <span id="download-percent">0%</span>
-          <span id="download-counter">0.0 MB / 5.8 MB</span>
-          <span id="download-speed">2.4 MB/s</span>
+          <span id="download-counter">0.0 MB / 4.3 MB</span>
+          <span id="download-speed">3.2 MB/s</span>
         </div>
 
-        <button class="btn-primary hidden" id="btn-download-action" style="margin-top: 10px;">最新版をインストール</button>
+        <button class="btn-primary hidden" id="btn-download-action" style="margin-top: 12px;">最新版をインストール</button>
       </div>
     </div>
 
