@@ -684,12 +684,33 @@ html, body {
   transition: width 0.08s linear;
 }
 
-.download-meta {
+.download-meta-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  font-family: var(--font-orbitron);
+  margin-top: 6px;
+}
+
+.meta-highlight {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--accent-cyan);
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+}
+
+.meta-speed {
+  font-size: 13px;
+  color: var(--accent-green);
+  font-weight: 700;
+}
+
+.download-meta-bytes {
+  font-family: var(--font-orbitron);
   font-size: 12px;
   color: var(--text-muted);
-  font-family: var(--font-orbitron);
+  text-align: right;
+  margin-top: 4px;
 }
 
 /* Stage Select Grid */

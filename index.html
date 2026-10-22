@@ -230,9 +230,9 @@
       </div>
     </div>
 
-    <!-- Download Progress Modal (クールなダウンロードアニメーション) -->
+    <!-- Download Progress Modal (クールなリアルタイム正確進行バー) -->
     <div class="modal-overlay hidden" id="modal-download">
-      <div class="modal-card">
+      <div class="modal-card modal-card-wide">
         <div class="modal-title">DOWNLOADING UPDATE</div>
         <div class="modal-subtitle" id="download-status-text">最新パッケージを受信中...</div>
         
@@ -240,13 +240,15 @@
           <div class="download-bar-fill" id="download-bar-fill"></div>
         </div>
 
-        <div class="download-meta">
-          <span id="download-percent">0%</span>
-          <span id="download-counter">0.0 MB / 4.3 MB</span>
-          <span id="download-speed">3.2 MB/s</span>
+        <div class="download-meta-row">
+          <span class="meta-highlight" id="download-percent">0%</span>
+          <span class="meta-speed" id="download-speed">⚡ 速度: 計算中...</span>
+        </div>
+        <div class="download-meta-bytes" id="download-counter">
+          0.00 MB / 4.09 MB (0 / 4,294,087 B)
         </div>
 
-        <button class="btn-primary hidden" id="btn-download-action" style="margin-top: 12px;">最新版をインストール</button>
+        <button class="btn-primary hidden" id="btn-download-action" style="margin-top: 14px;">最新版APKをインストール / 保存</button>
       </div>
     </div>
 
