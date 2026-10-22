@@ -3,6 +3,7 @@ apply plugin: 'com.android.application'
 android {
     namespace = "com.youyouboydragon.rollingblock"
     compileSdk = rootProject.ext.compileSdkVersion
+    buildToolsVersion = rootProject.ext.buildToolsVersion
     defaultConfig {
         applicationId "com.youyouboydragon.rollingblock"
         minSdkVersion rootProject.ext.minSdkVersion
