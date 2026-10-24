@@ -1,6 +1,6 @@
 {
   "name": "bloxorz-block-puzzle",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "3D Rolling Block Puzzle Game by youyouboydragon",
   "type": "module",
   "scripts": {
