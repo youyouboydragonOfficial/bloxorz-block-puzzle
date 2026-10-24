@@ -16,7 +16,7 @@ const TUTORIAL_SLIDES = [
   {
     icon: "✨",
     headline: "2. ゴールへの到達条件",
-    desc: "ステージ上にある<strong>ネオンに光るゴールホール</strong>を目指します。<br>クリアするには、ブロックが<strong>「直立した状態（立っている状態）」</strong>でゴール穴にスコッと落ちる必要があります！横倒しでは入れません。"
+    desc: "ステージ上にある<strong>ネオンに光るゴールホール</strong>を目指します！<br>ブロックが<strong>「直立した状態」</strong>で入れば<strong>【★★★ PERFECT!】</strong><br>また、横倒しの状態でもゴールを踏めば<strong>【★★ STAGE CLEAR!】</strong>としてクリアできます！"
   },
   {
     icon: "⚠️",
@@ -32,6 +32,11 @@ const TUTORIAL_SLIDES = [
     icon: "👁",
     headline: "5. 3D視点確認モード",
     desc: "ブロックが落ちてしまわないよう、右上の<strong>「👁 視点確認」</strong>ボタンを押すと、画面ドラッグでステージを360度全方位から観察できます！<br><strong>「🎯 正面」</strong>ボタンでいつでも正面のベストポジションに戻せます。"
+  },
+  {
+    icon: "🎲",
+    headline: "6. ブロック形状チェンジ（救済機能）",
+    desc: "HUDの<strong>「BLOCK 🔄」</strong>をタップすると、ブロックの形状をいつでも切り替えられます！<br>・<strong>1x1x2 (STANDARD)</strong>: 本格パズルの標準直方体<br>・<strong>1x1x1 (CUBE)</strong>: 初心者救済キューブ！細い一本道でも絶対に落ちません！<br>・<strong>1x1x3 (LONG)</strong>: 超ロングピラーの超難関モード！"
   }
 ];
 
@@ -93,6 +98,7 @@ class App {
     this.hudLevelName = document.getElementById('hud-level-name');
     this.hudMoveCount = document.getElementById('hud-move-count');
     this.hudBlockType = document.getElementById('hud-block-type');
+    this.btnChangeBlock = document.getElementById('btn-change-block');
 
     this.btnToggleMode = document.getElementById('btn-toggle-mode');
     this.modeIcon = document.getElementById('mode-icon');
@@ -122,6 +128,8 @@ class App {
 
     // Clear Modal
     this.modalClear = document.getElementById('modal-clear');
+    this.clearTitle = document.getElementById('clear-title');
+    this.clearSubtitle = document.getElementById('clear-subtitle');
     this.clearMovesCount = document.getElementById('clear-moves-count');
     this.btnNextLevel = document.getElementById('btn-next-level');
     this.btnClearRetry = document.getElementById('btn-clear-retry');
@@ -161,8 +169,8 @@ class App {
       onMove: (moves) => {
         this.hudMoveCount.textContent = moves;
       },
-      onWin: (totalMoves) => {
-        this.onStageClear(totalMoves);
+      onWin: (totalMoves, isPerfect) => {
+        this.onStageClear(totalMoves, isPerfect);
       },
       onFail: () => {
         setTimeout(() => {
@@ -210,17 +218,42 @@ class App {
 
     const blockTypeLabels = {
       STANDARD: "1x1x2",
-      CUBE: "1x1x1",
-      LONG: "1x1x3"
+      CUBE: "1x1x1 (救済)",
+      LONG: "1x1x3 (難関)"
     };
     this.hudBlockType.textContent = blockTypeLabels[levelData.blockType || "STANDARD"] || "1x1x2";
 
     this.gameScene.loadLevel(levelData);
   }
 
-  onStageClear(moves) {
+  onStageClear(moves, isPerfect = true) {
     this.clearMovesCount.textContent = moves;
+    if (isPerfect) {
+      this.clearTitle.textContent = "PERFECT CLEAR! ★★★";
+      this.clearSubtitle.textContent = "直立でホールイン達成！完璧なクリアです！";
+    } else {
+      this.clearTitle.textContent = "STAGE CLEAR! ★★";
+      this.clearSubtitle.textContent = "ゴール到達！（直立で入ると★★★PERFECT達成）";
+    }
     this.modalClear.classList.remove('hidden');
+  }
+
+  cycleBlockType() {
+    sound.playClick();
+    const cur = this.gameScene.blockLogic.blockType;
+    let next = "STANDARD";
+    if (cur === "STANDARD") next = "CUBE";
+    else if (cur === "CUBE") next = "LONG";
+    else next = "STANDARD";
+
+    this.gameScene.changeBlockType(next);
+
+    const blockTypeLabels = {
+      STANDARD: "1x1x2",
+      CUBE: "1x1x1 (救済)",
+      LONG: "1x1x3 (難関)"
+    };
+    this.hudBlockType.textContent = blockTypeLabels[next] || next;
   }
 
   updateModeUI(mode) {
@@ -273,6 +306,13 @@ class App {
       sound.playClick();
       this.loadLevel(this.currentLevelId);
     });
+
+    // ブロック形状切り替え (救済キューブ / 標準 / ロング)
+    if (this.btnChangeBlock) {
+      this.btnChangeBlock.addEventListener('click', () => {
+        this.cycleBlockType();
+      });
+    }
 
     // 視点確認モードトグル
     this.btnToggleMode.addEventListener('click', () => {

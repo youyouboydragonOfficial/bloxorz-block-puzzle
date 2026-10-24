@@ -75,8 +75,8 @@
             <div class="stat-label">MOVES</div>
             <div class="stat-value" id="hud-move-count">0</div>
           </div>
-          <div class="stat-box">
-            <div class="stat-label">BLOCK</div>
+          <div class="stat-box interactive-stat" id="btn-change-block" title="タップしてブロック形状を切替 (救済キューブ / 標準 / ロング)">
+            <div class="stat-label">BLOCK 🔄</div>
             <div class="stat-value" id="hud-block-type">1x1x2</div>
           </div>
         </div>
@@ -143,6 +143,7 @@
           <span class="dot"></span>
           <span class="dot"></span>
           <span class="dot"></span>
+          <span class="dot"></span>
         </div>
 
         <div class="tut-nav-buttons">
@@ -156,8 +157,8 @@
     <!-- Clear Modal -->
     <div class="modal-overlay hidden" id="modal-clear">
       <div class="modal-card">
-        <div class="modal-title">STAGE CLEAR!</div>
-        <div class="modal-subtitle">見事にゴールへ到達しました！</div>
+        <div class="modal-title" id="clear-title">STAGE CLEAR!</div>
+        <div class="modal-subtitle" id="clear-subtitle">見事にゴールへ到達しました！</div>
         <div class="stat-box" style="margin: 12px 0;">
           <div class="stat-label">TOTAL MOVES</div>
           <div class="stat-value" id="clear-moves-count">0</div>

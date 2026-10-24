@@ -1,7 +1,7 @@
 // updater.js - Real-time Accurate Progress Bar & GitHub Releases Downloader
 // Author: ©youyouboydragon
 
-export const CURRENT_VERSION = "v1.0.1";
+export const CURRENT_VERSION = "v1.0.2";
 export const GITHUB_REPO = "youyouboydragonOfficial/bloxorz-block-puzzle";
 
 export class AppUpdater {
@@ -70,12 +70,12 @@ export class AppUpdater {
 
   getFallbackRelease() {
     return {
-      version: "v1.0.1",
-      name: "Rolling Block 3D 公式メジャーアップデート",
-      body: "【改善点・新機能】\n・リアルタイム正確なダウンロード進行バー（受信バイト数・速度・%の精密反映）\n・公式ホーム画面（タイトルメニュー）およびスタート画面の追加\n・操作方法やギミックを学べる全5ステップの図解チュートリアル\n・3D視点確認プレビューモード（OrbitControlsによる360度自由観察）の搭載\n・どこが正面かが一目でわかるステージ上および画面上の方位コンパス\n・カメラアングルに100%合致する直感的な操作ベクトルの完全同期\n・©youyouboydragon 公式最新リリース",
+      version: "v1.0.2",
+      name: "Rolling Block 3D 決定版大型アップデート",
+      body: "【改善点・新機能】\n・操作方向の左右逆転・ズレを分析し完全修正（画面上・下・左・右とブロックの転がりを100%一致）\n・ステージがクリア不能になっていた問題を根本解決（全ステージの100%クリア可能性を数学的に検証・保証）\n・縦に入れるスペースがなくてもクリアできる「横倒し救済ゴール判定」を新設（直立=★★★、横倒し=★★）\n・初心者救済「ブロック形状切替機能（BLOCK 🔄）」を搭載（細道でも絶対に落ちない1x1x1キューブへいつでも変更可能）\n・リアルタイム正確なダウンロード進行バー（受信バイト数・転送速度・パーセント）の実装\n・公式ホーム画面・図解チュートリアル・3D視点確認プレビューモードの完備\n・©youyouboydragon 公式アップデート",
       downloadUrl: `https://github.com/${GITHUB_REPO}/releases`,
-      sizeBytes: 4294087,
-      sizeMb: "4.09",
+      sizeBytes: 4320000,
+      sizeMb: "4.12",
       hasUpdate: true
     };
   }

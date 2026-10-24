@@ -3,6 +3,9 @@ dist/
 .DS_Store
 Thumbs.db
 
+# APK binaries
+*.apk
+
 # Android
 android/.gradle/
 android/app/build/

@@ -420,10 +420,28 @@ export class GameScene {
     requestAnimationFrame(anim);
   }
 
+  // ブロック形状の動的切り替え (ユーザー救済 & 難易度調整機能)
+  changeBlockType(newType) {
+    if (this.isAnimating || this.isClear || this.isDead) return;
+    this.blockLogic.blockType = newType;
+    this.blockLogic.orientation = ORIENTATION.STANDING;
+
+    if (this.blockMesh) {
+      this.scene.remove(this.blockMesh);
+      if (this.pivotGroup.children.includes(this.blockMesh)) {
+        this.pivotGroup.remove(this.blockMesh);
+      }
+      this.blockMesh = null;
+    }
+
+    this.buildBlockMesh();
+    this.updateBlockMeshInstant();
+  }
+
   /**
    * 【最重要機能】スクリーン上の方向（screenDx, screenDy）を、
    * 現在のカメラアングルに基づいたグリッドの移動方向（gridDx, gridDy）に変換する！
-   * これにより、視点がどんな角度になっていても「画面の上を押せば画面の奥に転がる」！
+   * 画面の上を押せば必ず画面の奥、右を押せば必ず右に100%正確に転がる！
    */
   mapScreenDirToGrid(screenDx, screenDy) {
     // カメラの水平方向の前方ベクトル (forward) と右方向ベクトル (right)
@@ -432,21 +450,23 @@ export class GameScene {
     forward.z = 0; // 水平投影
     forward.normalize();
 
+    // Three.js (Z-up): forward x (0, 0, 1) = 水平右方向ベクトル
     const right = new THREE.Vector3();
     right.crossVectors(forward, new THREE.Vector3(0, 0, 1)).normalize();
 
     // 画面上の意図する移動ベクトル (ワールドXY平面上)
-    // 画面の上 (screenDy = -1) => forward
-    // 画面の下 (screenDy = 1) => -forward
-    // 画面の右 (screenDx = 1) => -right
-    // 画面の左 (screenDx = -1) => right
+    // 画面の上 (screenDy = -1) => forward (奥へ)
+    // 画面の下 (screenDy = 1)  => -forward (手前へ)
+    // 画面の右 (screenDx = 1)  => right (右へ)
+    // 画面の左 (screenDx = -1) => -right (左へ)
     const desired = new THREE.Vector3();
     if (screenDy === -1) desired.copy(forward);
     else if (screenDy === 1) desired.copy(forward).negate();
-    else if (screenDx === 1) desired.copy(right).negate();
-    else if (screenDx === -1) desired.copy(right);
+    else if (screenDx === 1) desired.copy(right);
+    else if (screenDx === -1) desired.copy(right).negate();
 
     // 4つの基本グリッド方向 (dx, dy)
+    // +X: 右, -X: 左, +Y: 奥 (画面上), -Y: 手前 (画面下)
     const gridOptions = [
       { dx: 1, dy: 0, vec: new THREE.Vector3(1, 0, 0) },   // +X
       { dx: -1, dy: 0, vec: new THREE.Vector3(-1, 0, 0) }, // -X
@@ -577,12 +597,21 @@ export class GameScene {
     }
 
     // ゴール判定
+    // 1. 直立ゴール: PERFECT CLEAR! (★★★)
     if (this.blockLogic.orientation === ORIENTATION.STANDING) {
       const cell = occupied[0];
       if (grid[cell.y][cell.x] === 3) {
-        this.triggerGoalClear();
+        this.triggerGoalClear(true);
         return;
       }
+    }
+
+    // 2. 横倒しゴール (ユーザー救済アシスト): STAGE CLEAR! (★★)
+    // ブロックの一部がゴール穴を踏み、かつ全マスが有効な床に乗っている場合
+    const onGoal = occupied.some(c => grid[c.y]?.[c.x] === 3);
+    if (onGoal) {
+      this.triggerGoalClear(false);
+      return;
     }
   }
 
@@ -659,7 +688,7 @@ export class GameScene {
     requestAnimationFrame(fallAnim);
   }
 
-  triggerGoalClear() {
+  triggerGoalClear(isPerfect = true) {
     this.isClear = true;
     sound.playClear();
 
@@ -681,7 +710,7 @@ export class GameScene {
         requestAnimationFrame(clearAnim);
       } else {
         if (this.callbacks.onWin) {
-          this.callbacks.onWin(this.moveCount);
+          this.callbacks.onWin(this.moveCount, isPerfect);
         }
       }
     };
