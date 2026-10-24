@@ -34,6 +34,11 @@ export class GameScene {
     this.isDead = false;
     this.moveCount = 0;
 
+    // 赤いタイル（時限崩壊）の管理
+    this.fragileCountdownTimer = null;
+    this.activeFragileTiles = [];
+    this.isFragileWarning = false;
+
     // モード: 'PLAY' (ブロック操作) または 'PREVIEW' (3D視点回転)
     this.mode = 'PLAY';
 
@@ -215,6 +220,13 @@ export class GameScene {
   }
 
   clearLevelObjects() {
+    if (this.fragileCountdownTimer) {
+      clearTimeout(this.fragileCountdownTimer);
+      this.fragileCountdownTimer = null;
+    }
+    this.isFragileWarning = false;
+    this.activeFragileTiles = [];
+
     this.tileMeshes.forEach(mesh => this.scene.remove(mesh));
     this.tileMeshes = [];
     this.switchMeshes.forEach(m => this.scene.remove(m));
@@ -249,10 +261,10 @@ export class GameScene {
     const tileEdgeMat = new THREE.LineBasicMaterial({ color: 0x3d5178 });
 
     const fragileTileMat = new THREE.MeshStandardMaterial({
-      color: 0xee5500,
-      emissive: 0xaa2200,
-      emissiveIntensity: 0.35,
-      roughness: 0.4
+      color: 0xff2a2a,
+      emissive: 0xcc0000,
+      emissiveIntensity: 0.45,
+      roughness: 0.35
     });
 
     const goalHoleMat = new THREE.MeshStandardMaterial({
@@ -527,6 +539,22 @@ export class GameScene {
   executeRoll(dx, dy) {
     if (this.isAnimating || this.isClear || this.isDead) return;
 
+    // もし赤いタイルの時限崩壊警告中だった場合、プレイヤーは危機一髪脱出！
+    if (this.isFragileWarning) {
+      if (this.fragileCountdownTimer) {
+        clearTimeout(this.fragileCountdownTimer);
+        this.fragileCountdownTimer = null;
+      }
+      this.isFragileWarning = false;
+
+      // 脱出元の赤いタイル群を背後で全崩壊させる！
+      const collapsingGroup = [...this.activeFragileTiles];
+      this.activeFragileTiles = [];
+      setTimeout(() => {
+        this.executeFullCollapse(collapsingGroup, false);
+      }, 100);
+    }
+
     const rollData = this.blockLogic.calculateRoll(dx, dy);
     if (!rollData) return;
 
@@ -625,12 +653,12 @@ export class GameScene {
       }
     }
 
-    // 壊れる床 (オレンジ) 直立判定
+    // 壊れる赤い床 (type 2) 直立判定 - 時限崩壊カウントダウン開始！
     if (this.blockLogic.orientation === ORIENTATION.STANDING && hasTile) {
       const cell = occupied[0];
       if (grid[cell.y][cell.x] === 2) {
-        this.triggerFragileCollapse(cell.x, cell.y);
-        return;
+        this.startFragileCountdown(cell.x, cell.y);
+        // 即死にはせず、1.2秒の猶予時間を与える！
       }
     }
 
@@ -645,52 +673,146 @@ export class GameScene {
     }
   }
 
-  checkSwitches(occupied) {
-    this.switchMeshes.forEach(swMesh => {
-      const sw = swMesh.userData.switchData;
-      const isStepped = occupied.some(c => c.x === sw.x && c.y === sw.y);
+  // 連続する赤いタイル群（type 2）を全探索
+  findConnectedFragileTiles(startX, startY) {
+    const grid = this.levelData.grid;
+    const height = grid.length;
+    const width = grid[0].length;
+    const visited = new Set();
+    const result = [];
+    const queue = [{ x: startX, y: startY }];
+    visited.add(`${startX},${startY}`);
 
-      if (isStepped) {
-        if (sw.type === 'heavy' && this.blockLogic.orientation !== ORIENTATION.STANDING) {
-          return;
-        }
-        sound.playSwitch();
-        swMesh.position.z = 0.01;
-        
-        if (sw.targets) {
-          sw.targets.forEach(tgt => {
-            const curVal = this.levelData.grid[tgt.y][tgt.x];
-            this.levelData.grid[tgt.y][tgt.x] = (curVal === 0) ? 1 : 0;
-          });
-          const curLogic = { x: this.blockLogic.x, y: this.blockLogic.y, ori: this.blockLogic.orientation };
-          this.clearLevelObjects();
-          this.buildStage();
-          this.blockLogic.x = curLogic.x;
-          this.blockLogic.y = curLogic.y;
-          this.blockLogic.orientation = curLogic.ori;
-          this.buildBlockMesh();
-          this.updateBlockMeshInstant();
+    while (queue.length > 0) {
+      const cur = queue.shift();
+      result.push(cur);
+
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = cur.x + dx;
+        const ny = cur.y + dy;
+        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+          if (grid[ny][nx] === 2 && !visited.has(`${nx},${ny}`)) {
+            visited.add(`${nx},${ny}`);
+            queue.push({ x: nx, y: ny });
+          }
         }
       }
-    });
+    }
+    return result;
   }
 
-  triggerFragileCollapse(x, y) {
-    this.isDead = true;
+  // 赤いタイルの時限崩壊カウントダウン（猶予時間: 1200ms）
+  startFragileCountdown(startX, startY) {
+    if (this.isFragileWarning || this.isDead || this.isClear) return;
+    this.isFragileWarning = true;
+
+    // 繋がっている赤いタイル全体を特定
+    const connected = this.findConnectedFragileTiles(startX, startY);
+    this.activeFragileTiles = connected;
+
+    // 該当するすべての赤いタイルメッシュを取得
+    const targetMeshes = this.tileMeshes.filter(m => 
+      m.userData && m.userData.isFragile && 
+      connected.some(c => c.x === m.userData.gx && c.y === m.userData.gy)
+    );
+
+    // 警告アニメーション（小刻みな振動＆赤黒い点滅）
+    const startT = performance.now();
+    const duration = 1200; // 1.2秒の猶予時間（十分に次の手を入力可能！）
+
+    const warningAnim = (now) => {
+      if (!this.isFragileWarning) {
+        // 脱出した場合は振動をリセット
+        targetMeshes.forEach(m => {
+          m.position.z = -0.125;
+          if (m.material) {
+            m.material.emissiveIntensity = 0.35;
+          }
+        });
+        return;
+      }
+
+      const elapsed = now - startT;
+      const progress = Math.min(elapsed / duration, 1.0);
+
+      // 激しい振動 (シェイク)
+      const shakeIntensity = 0.02 + progress * 0.035;
+      const shakeZ = Math.sin(now * 0.08) * shakeIntensity;
+      targetMeshes.forEach(m => {
+        m.position.z = -0.125 + shakeZ;
+        if (m.material) {
+          // 赤黒くパルス発光
+          m.material.emissiveIntensity = 0.4 + Math.sin(now * 0.03) * 0.5;
+        }
+      });
+
+      // ブロック本体も足元の揺れで小刻みにシェイク
+      if (this.blockMesh && !this.isAnimating) {
+        this.blockMesh.position.z = 1.0 + Math.sin(now * 0.08) * shakeIntensity * 0.5;
+      }
+
+      if (progress < 1.0) {
+        requestAnimationFrame(warningAnim);
+      }
+    };
+    requestAnimationFrame(warningAnim);
+
+    // 1200ms 後に脱出していなければ一斉崩落！
+    this.fragileCountdownTimer = setTimeout(() => {
+      if (!this.isFragileWarning) return;
+      this.isFragileWarning = false;
+      this.executeFullCollapse(connected, true);
+    }, duration);
+  }
+
+  // 赤いタイルの全崩壊実行（ダイナミック全崩落演出）
+  executeFullCollapse(connectedTiles, shouldKillPlayer = false) {
     sound.playFall();
-    
-    const targetTile = this.tileMeshes.find(m => m.userData && m.userData.gx === x && m.userData.gy === y);
-    if (targetTile) {
-      const startT = performance.now();
-      const dropAnim = (now) => {
-        const el = (now - startT) / 400;
-        targetTile.position.z -= 0.15;
-        targetTile.rotation.x += 0.05;
-        if (el < 1.0) requestAnimationFrame(dropAnim);
-      };
-      requestAnimationFrame(dropAnim);
+
+    // 該当するすべてのタイルメッシュ
+    const targetMeshes = this.tileMeshes.filter(m => 
+      m.userData && m.userData.isFragile && 
+      connectedTiles.some(c => c.x === m.userData.gx && c.y === m.userData.gy)
+    );
+
+    // グリッドから床を消滅（0にする）
+    connectedTiles.forEach(c => {
+      if (this.levelData.grid[c.y]) {
+        this.levelData.grid[c.y][c.x] = 0;
+      }
+    });
+
+    // 繋がっているすべてのタイルが一斉にガラガラガラ…！と崩落
+    const startT = performance.now();
+    const duration = 700;
+
+    const collapseAnim = (now) => {
+      const elapsed = now - startT;
+      const progress = Math.min(elapsed / duration, 1.0);
+
+      targetMeshes.forEach((mesh, idx) => {
+        const delay = (idx % 4) * 0.04;
+        const localP = Math.max(0, progress - delay);
+        if (localP > 0) {
+          mesh.position.z = -0.125 - Math.pow(localP * 2.5, 2) * 4;
+          mesh.rotation.x += 0.04;
+          mesh.rotation.y += 0.03;
+          mesh.scale.multiplyScalar(0.98);
+        }
+      });
+
+      if (progress < 1.0) {
+        requestAnimationFrame(collapseAnim);
+      } else {
+        targetMeshes.forEach(m => this.scene.remove(m));
+      }
+    };
+    requestAnimationFrame(collapseAnim);
+
+    // プレイヤーがその上に留まり続けていた場合は落下死
+    if (shouldKillPlayer) {
+      this.triggerFall();
     }
-    this.triggerFall();
   }
 
   triggerFall() {

@@ -1,7 +1,7 @@
 // updater.js - In-App Direct APK Downloader & Installer (100% App-Contained)
 // Author: ©youyouboydragon
 
-export const CURRENT_VERSION = "v1.0.4";
+export const CURRENT_VERSION = "v1.0.5";
 export const GITHUB_REPO = "youyouboydragonOfficial/bloxorz-block-puzzle";
 
 export class AppUpdater {
@@ -75,11 +75,11 @@ export class AppUpdater {
 
   getFallbackRelease() {
     return {
-      version: "v1.0.4",
-      name: "Rolling Block 3D アプリ内直接更新＆ゴールブロック 刷新アップデート",
-      body: "【改善点・新機能】\n・アプリ内完全完結の直接APKダウンロード＆自動インストール機能を実装！\n・外部サイトへ飛ばされることなく、アプリ内で直接アップデートが完了します！\n・ゴールを「穴」から「光輝く神聖な立体床ブロック（ゴールパッド）」に完全刷新！\n・ゴール床を踏んだ瞬間に絶対に落下死しない最優先ゴール到達判定を実装！\n・クリア演出を「落下」から「ゴールブロックの上でまばゆく光り輝き上空へ昇華する勝利演出」へ刷新！\n・全1000ステージの100%解法保証 & ブロック形状切替機能（CUBE/STANDARD/LONG）\n・リアルタイム正確なダウンロード進行バー（受信バイト数・速度・%）\n・©youyouboydragon 公式アップデート",
-      downloadUrl: `https://github.com/${GITHUB_REPO}/releases/download/v1.0.4/rolling-block-3d-v1.0.4.apk`,
-      sizeBytes: 4316439,
+      version: "v1.0.5",
+      name: "Rolling Block 3D 赤いタイルの時限崩壊＆連鎖崩壊 刷新アップデート",
+      body: "【改善点・新機能】\n・赤いタイルの直立時に即死せず、1.2秒間の脱出猶予（時限崩壊カウントダウン）を導入！\n・カタカタと激しく振動する崩壊前兆中、素早く次のマスへ移動すれば危機一髪脱出可能！\n・崩壊時は繋がっている赤いタイル群が一斉にガラガラと連鎖全崩落するダイナミック演出へ進化！\n・アプリ内完全完結の直接APKダウンロード＆自動インストール機能を搭載\n・ゴールを「穴」から「光輝く神聖な立体床ブロック（ゴールパッド）」に完全刷新\n・ゴール接触時の最優先クリア判定（落下死を完全根絶）\n・全1000ステージの100%解法保証 & ブロック形状切替機能（CUBE/STANDARD/LONG）\n・©youyouboydragon 公式アップデート",
+      downloadUrl: `https://github.com/${GITHUB_REPO}/releases/download/v1.0.5/rolling-block-3d-v1.0.5.apk`,
+      sizeBytes: 4325000,
       sizeMb: "4.12",
       hasUpdate: true
     };
