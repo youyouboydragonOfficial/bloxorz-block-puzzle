@@ -1,7 +1,7 @@
 // updater.js - Real-time Accurate Progress Bar & GitHub Releases Downloader
 // Author: ©youyouboydragon
 
-export const CURRENT_VERSION = "v1.0.2";
+export const CURRENT_VERSION = "v1.0.3";
 export const GITHUB_REPO = "youyouboydragonOfficial/bloxorz-block-puzzle";
 
 export class AppUpdater {
@@ -70,11 +70,11 @@ export class AppUpdater {
 
   getFallbackRelease() {
     return {
-      version: "v1.0.2",
-      name: "Rolling Block 3D 決定版大型アップデート",
-      body: "【改善点・新機能】\n・操作方向の左右逆転・ズレを分析し完全修正（画面上・下・左・右とブロックの転がりを100%一致）\n・ステージがクリア不能になっていた問題を根本解決（全ステージの100%クリア可能性を数学的に検証・保証）\n・縦に入れるスペースがなくてもクリアできる「横倒し救済ゴール判定」を新設（直立=★★★、横倒し=★★）\n・初心者救済「ブロック形状切替機能（BLOCK 🔄）」を搭載（細道でも絶対に落ちない1x1x1キューブへいつでも変更可能）\n・リアルタイム正確なダウンロード進行バー（受信バイト数・転送速度・パーセント）の実装\n・公式ホーム画面・図解チュートリアル・3D視点確認プレビューモードの完備\n・©youyouboydragon 公式アップデート",
+      version: "v1.0.3",
+      name: "Rolling Block 3D ゴール床ブロック＆昇華演出 刷新アップデート",
+      body: "【改善点・新機能】\n・ゴールを「穴」から「光輝く神聖な立体床ブロック（ゴールパッド）」に完全刷新！\n・ゴール床を踏んだ瞬間に絶対に落下死しない最優先ゴール到達判定を実装！\n・全ステージのゴール周囲に床ブロックをしっかり敷き詰め、はみ出しによる落下を根絶！\n・クリア演出を「落下」から「ゴールブロックの上でまばゆく光り輝き上空へ昇華する勝利演出」へ刷新！\n・操作方向完全修正・全ステージ100%解法保証・ブロック形状切替機能（CUBE/STANDARD/LONG）\n・リアルタイム正確なダウンロード進行バー（受信バイト数・速度・%）および3秒スキャン演出\n・©youyouboydragon 公式アップデート",
       downloadUrl: `https://github.com/${GITHUB_REPO}/releases`,
-      sizeBytes: 4320000,
+      sizeBytes: 4325000,
       sizeMb: "4.12",
       hasUpdate: true
     };

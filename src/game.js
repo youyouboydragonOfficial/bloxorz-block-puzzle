@@ -288,26 +288,52 @@ export class GameScene {
           mesh.userData = { isFragile: true, gx: x, gy: y };
           this.scene.add(mesh);
           this.tileMeshes.push(mesh);
-        } else if (type === 3) { // ゴール
-          const mesh = new THREE.Mesh(tileGeo, goalHoleMat);
-          mesh.position.set(cx, cy, cz - 0.05);
-          this.scene.add(mesh);
-          this.tileMeshes.push(mesh);
+        } else if (type === 3) { // ゴール（しっかりとした床ブロック＋光るゴールパッド）
+          // 1. 土台となる強固な立体床ブロック (ブロックの上にゴールを設置)
+          const goalBaseMat = new THREE.MeshStandardMaterial({
+            color: 0x1a263f,
+            roughness: 0.25,
+            metalness: 0.5
+          });
+          const baseMesh = new THREE.Mesh(tileGeo, goalBaseMat);
+          baseMesh.position.set(cx, cy, cz);
+          baseMesh.receiveShadow = true;
+          this.scene.add(baseMesh);
+          this.tileMeshes.push(baseMesh);
 
-          const ringGeo = new THREE.RingGeometry(0.2, 0.46, 32);
+          // ゴールドネオンの枠線
+          const goldEdgeMat = new THREE.LineBasicMaterial({ color: 0xffd700, linewidth: 2 });
+          const baseWire = new THREE.LineSegments(tileEdgesGeo, goldEdgeMat);
+          baseMesh.add(baseWire);
+
+          // 2. ブロック天面の光り輝くネオンゴールプレート (Goal Pad)
+          const padGeo = new THREE.BoxGeometry(0.86, 0.86, 0.05);
+          const padMat = new THREE.MeshStandardMaterial({
+            color: 0x00f0ff,
+            emissive: 0x00d2ff,
+            emissiveIntensity: 0.75,
+            roughness: 0.2,
+            metalness: 0.8
+          });
+          const padMesh = new THREE.Mesh(padGeo, padMat);
+          padMesh.position.set(cx, cy, 0.025);
+          this.scene.add(padMesh);
+          this.tileMeshes.push(padMesh);
+
+          // 3. ゴールエンブレム (中心の光るリング)
+          const ringGeo = new THREE.RingGeometry(0.18, 0.36, 32);
           const ringMat = new THREE.MeshBasicMaterial({
-            color: 0x00ffee,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.95
+            color: 0xffffff,
+            side: THREE.DoubleSide
           });
           const ring = new THREE.Mesh(ringGeo, ringMat);
-          ring.position.set(cx, cy, 0.01);
+          ring.position.set(cx, cy, 0.055);
           this.scene.add(ring);
           this.tileMeshes.push(ring);
 
-          this.goalLight = new THREE.PointLight(0x00ffcc, 3.0, 7);
-          this.goalLight.position.set(cx, cy, 0.7);
+          // 4. 強烈なゴールビーコンライト
+          this.goalLight = new THREE.PointLight(0x00ffea, 3.5, 9);
+          this.goalLight.position.set(cx, cy, 0.8);
           this.scene.add(this.goalLight);
         }
       }
@@ -563,8 +589,30 @@ export class GameScene {
     const height = grid.length;
     const width = grid[0].length;
 
-    let hasTile = true;
+    // 【最優先判定】ゴール床ブロックへの到達！
+    // ブロックがゴール床（3）に少しでも乗っていれば、絶対に落下死させずにクリア判定！
+    const touchesGoal = occupied.some(c => {
+      if (c.x >= 0 && c.x < width && c.y >= 0 && c.y < height) {
+        return grid[c.y][c.x] === 3;
+      }
+      return false;
+    });
 
+    if (touchesGoal) {
+      if (this.blockLogic.orientation === ORIENTATION.STANDING) {
+        // 直立でゴール床ブロックの上に乗った場合: PERFECT CLEAR! (★★★)
+        this.triggerGoalClear(true);
+        return;
+      } else {
+        // 横倒しでゴール床ブロックを踏んだ場合: STAGE CLEAR! (★★)
+        // 周囲に床がなくても、ゴールを踏んだ瞬間に安全にゴールイン！
+        this.triggerGoalClear(false);
+        return;
+      }
+    }
+
+    // 通常の床チェック (奈落・ボイドへの落下判定)
+    let hasTile = true;
     for (const cell of occupied) {
       if (cell.x < 0 || cell.x >= width || cell.y < 0 || cell.y >= height) {
         hasTile = false;
@@ -593,24 +641,6 @@ export class GameScene {
 
     if (!hasTile) {
       this.triggerFall();
-      return;
-    }
-
-    // ゴール判定
-    // 1. 直立ゴール: PERFECT CLEAR! (★★★)
-    if (this.blockLogic.orientation === ORIENTATION.STANDING) {
-      const cell = occupied[0];
-      if (grid[cell.y][cell.x] === 3) {
-        this.triggerGoalClear(true);
-        return;
-      }
-    }
-
-    // 2. 横倒しゴール (ユーザー救済アシスト): STAGE CLEAR! (★★)
-    // ブロックの一部がゴール穴を踏み、かつ全マスが有効な床に乗っている場合
-    const onGoal = occupied.some(c => grid[c.y]?.[c.x] === 3);
-    if (onGoal) {
-      this.triggerGoalClear(false);
       return;
     }
   }
@@ -693,18 +723,24 @@ export class GameScene {
     sound.playClear();
 
     const startT = performance.now();
-    const duration = 800;
+    const duration = 900;
     const startZ = this.blockMesh.position.z;
 
+    // 【勝利演出】落下ではなく、ゴールブロックの上でまばゆく光り輝きながら上空へ浮揚・回転する昇華演出！
     const clearAnim = (now) => {
-      const progress = (now - startT) / duration;
+      const elapsed = now - startT;
+      const progress = Math.min(elapsed / duration, 1.0);
+
       if (progress < 1.0) {
-        this.blockMesh.position.z = startZ - progress * 1.5;
-        this.blockMesh.scale.x = Math.max(0.01, 1 - progress * 0.8);
-        this.blockMesh.scale.y = Math.max(0.01, 1 - progress * 0.8);
+        // ふわりと上に舞い上がり、黄金の光を放つ
+        const ease = Math.sin(progress * Math.PI * 0.5);
+        this.blockMesh.position.z = startZ + ease * 1.6;
+        this.blockMesh.rotation.z += 0.06;
+        this.blockMesh.rotation.y += 0.04;
         
+        // 祝祭のゴールライトパルス
         if (this.goalLight) {
-          this.goalLight.intensity = 3.0 + Math.sin(progress * 20) * 2;
+          this.goalLight.intensity = 3.5 + Math.sin(progress * 16) * 3;
         }
 
         requestAnimationFrame(clearAnim);
