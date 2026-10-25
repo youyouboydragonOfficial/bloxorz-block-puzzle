@@ -20,8 +20,8 @@ const TUTORIAL_SLIDES = [
   },
   {
     icon: "⚠️",
-    headline: "3. 落下と時限崩壊の赤いタイル",
-    desc: "床のない奈落に足を踏み外すと落下して失敗となります。<br>また、<strong>赤い崩壊タイル</strong>の上に直立すると、カタカタと激しく振動し<strong>1.2秒後に連鎖崩壊</strong>します！崩れ落ちる前に素早く次のマスへ脱出するか、<strong>横倒しの状態</strong>で素早く通り抜けましょう。"
+    headline: "3. 落下と赤いタイルの時限崩壊",
+    desc: "床のない奈落に落ちると失敗となります。<br>ただし、<strong>2マスのうち1マスがはみ出してもバランスを保ってギリギリ耐える（BALANCE HOLD）</strong>ことができます！（減点ペナルティあり）<br>また、<strong>赤い崩壊タイル</strong>の上に直立すると2秒後にそのマスが崩落します！<strong>横倒しの状態</strong>なら重さが分散され安全に通過できます。"
   },
   {
     icon: "🔘",
@@ -47,6 +47,8 @@ class App {
     this.gameScene = null;
     this.updater = null;
     this.tutIndex = 0;
+    this.currentScore = 1000;
+    this.balanceBannerTimer = null;
 
     this.initElements();
     this.initGame();
@@ -55,6 +57,13 @@ class App {
 
     // ホーム画面のラベル更新
     this.updateHomeLabels();
+
+    // 【重要機能】アプリ起動時の自動更新確認（更新がある場合のみ案内表示）
+    setTimeout(() => {
+      if (this.updater) {
+        this.updater.checkForUpdates(false);
+      }
+    }, 1200);
   }
 
   loadSavedLevel() {
@@ -96,9 +105,11 @@ class App {
     this.btnBackHome = document.getElementById('btn-back-home');
     this.hudLevelNumber = document.getElementById('hud-level-number');
     this.hudLevelName = document.getElementById('hud-level-name');
+    this.hudScore = document.getElementById('hud-score');
     this.hudMoveCount = document.getElementById('hud-move-count');
     this.hudBlockType = document.getElementById('hud-block-type');
     this.btnChangeBlock = document.getElementById('btn-change-block');
+    this.bannerBalanceHold = document.getElementById('banner-balance-hold');
 
     this.btnToggleMode = document.getElementById('btn-toggle-mode');
     this.modeIcon = document.getElementById('mode-icon');
@@ -131,6 +142,7 @@ class App {
     this.clearTitle = document.getElementById('clear-title');
     this.clearSubtitle = document.getElementById('clear-subtitle');
     this.clearMovesCount = document.getElementById('clear-moves-count');
+    this.clearScoreCount = document.getElementById('clear-score-count');
     this.btnNextLevel = document.getElementById('btn-next-level');
     this.btnClearRetry = document.getElementById('btn-clear-retry');
 
@@ -168,6 +180,12 @@ class App {
     this.gameScene = new GameScene(this.canvasContainer, {
       onMove: (moves) => {
         this.hudMoveCount.textContent = moves;
+        // 手数ごとにスコア微減
+        this.currentScore = Math.max(0, this.currentScore - 5);
+        if (this.hudScore) this.hudScore.textContent = this.currentScore;
+      },
+      onBalanceHold: (info) => {
+        this.handleBalanceHold(info);
       },
       onWin: (totalMoves, isPerfect) => {
         this.onStageClear(totalMoves, isPerfect);
@@ -187,6 +205,25 @@ class App {
 
     // 初期ロード
     this.loadLevel(this.currentLevelId);
+  }
+
+  // はみ出しバランス耐え時のペナルティ処理＆警告通知バナー
+  handleBalanceHold(info) {
+    const penalty = info.penalty || 50;
+    this.currentScore = Math.max(0, this.currentScore - penalty);
+    if (this.hudScore) this.hudScore.textContent = this.currentScore;
+
+    if (this.bannerBalanceHold) {
+      this.bannerBalanceHold.classList.remove('hidden');
+      if (this.balanceBannerTimer) {
+        clearTimeout(this.balanceBannerTimer);
+      }
+      this.balanceBannerTimer = setTimeout(() => {
+        if (this.bannerBalanceHold) {
+          this.bannerBalanceHold.classList.add('hidden');
+        }
+      }, 2200);
+    }
   }
 
   showGameScreen() {
@@ -210,11 +247,19 @@ class App {
 
     this.currentLevelId = levelId;
     this.saveLevel(levelId);
+    this.currentScore = 1000;
+
+    if (this.bannerBalanceHold) {
+      this.bannerBalanceHold.classList.add('hidden');
+    }
 
     const levelData = generateLevel(levelId);
     this.hudLevelNumber.textContent = `STAGE ${levelId} / 1000`;
     this.hudLevelName.textContent = levelData.name;
     this.hudMoveCount.textContent = "0";
+    if (this.hudScore) {
+      this.hudScore.textContent = this.currentScore;
+    }
 
     const blockTypeLabels = {
       STANDARD: "1x1x2",
@@ -228,6 +273,9 @@ class App {
 
   onStageClear(moves, isPerfect = true) {
     this.clearMovesCount.textContent = moves;
+    if (this.clearScoreCount) {
+      this.clearScoreCount.textContent = this.currentScore;
+    }
     if (isPerfect) {
       this.clearTitle.textContent = "PERFECT CLEAR! ★★★";
       this.clearSubtitle.textContent = "直立でホールイン達成！完璧なクリアです！";
@@ -296,11 +344,19 @@ class App {
       if (!isMuted) sound.startBgm();
     });
 
-    // ゲーム画面イベント
-    this.btnBackHome.addEventListener('click', () => {
+    // ゲーム画面イベント - タイトルへ戻る（モバイルでのタッチ不発を完全防止）
+    let lastHomeClick = 0;
+    const triggerBackHome = (e) => {
+      const now = Date.now();
+      if (now - lastHomeClick < 300) return; // デバウンス
+      lastHomeClick = now;
+      if (e && e.cancelable) e.preventDefault();
       sound.playClick();
       this.showHomeScreen();
-    });
+    };
+
+    this.btnBackHome.addEventListener('pointerdown', triggerBackHome);
+    this.btnBackHome.addEventListener('click', triggerBackHome);
 
     this.btnRestart.addEventListener('click', () => {
       sound.playClick();

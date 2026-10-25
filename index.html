@@ -63,14 +63,22 @@
       <!-- Top HUD -->
       <div class="top-hud interactive">
         <div class="hud-left">
-          <div class="hud-nav-row">
-            <button class="icon-btn-nav" id="btn-back-home" title="タイトルへ戻る">🏠</button>
+          <!-- 大きく押しやすいタイトルへ戻るボタン -->
+          <button class="btn-nav-home" id="btn-back-home" title="タイトル画面へ戻る">
+            <span class="btn-nav-home-icon">🏠</span>
+            <span class="btn-nav-home-text">タイトル</span>
+          </button>
+          <div class="level-info-col">
             <div class="level-badge" id="hud-level-number">STAGE 1 / 1000</div>
+            <div class="level-name" id="hud-level-name">覚醒の道 (First Steps)</div>
           </div>
-          <div class="level-name" id="hud-level-name">覚醒の道 (First Steps)</div>
         </div>
 
         <div class="hud-stats">
+          <div class="stat-box stat-score-box">
+            <div class="stat-label">SCORE</div>
+            <div class="stat-value text-gold" id="hud-score">1000</div>
+          </div>
           <div class="stat-box">
             <div class="stat-label">MOVES</div>
             <div class="stat-value" id="hud-move-count">0</div>
@@ -90,6 +98,15 @@
           <button class="icon-btn" id="btn-reset-cam" title="正面アングルに戻す">🎯</button>
           <button class="icon-btn" id="btn-restart" title="最初からリトライ (R)">🔄</button>
           <button class="icon-btn" id="btn-game-update" title="アプリアップデート確認">⚡更新</button>
+        </div>
+      </div>
+
+      <!-- はみ出しバランス耐え通知バナー (1マスはみ出しても落下せず耐えた時の通知) -->
+      <div class="balance-warning-banner hidden" id="banner-balance-hold">
+        <span class="balance-icon">⚠️</span>
+        <div class="balance-text-group">
+          <span class="balance-main">BALANCE HOLD! 落下を耐えた！</span>
+          <span class="balance-sub">はみ出しペナルティ: スコア -50pt</span>
         </div>
       </div>
 
@@ -159,9 +176,15 @@
       <div class="modal-card">
         <div class="modal-title" id="clear-title">STAGE CLEAR!</div>
         <div class="modal-subtitle" id="clear-subtitle">見事にゴールへ到達しました！</div>
-        <div class="stat-box" style="margin: 12px 0;">
-          <div class="stat-label">TOTAL MOVES</div>
-          <div class="stat-value" id="clear-moves-count">0</div>
+        <div style="display: flex; gap: 10px; margin: 12px 0;">
+          <div class="stat-box" style="flex: 1;">
+            <div class="stat-label">TOTAL MOVES</div>
+            <div class="stat-value" id="clear-moves-count">0</div>
+          </div>
+          <div class="stat-box" style="flex: 1;">
+            <div class="stat-label">FINAL SCORE</div>
+            <div class="stat-value text-gold" id="clear-score-count">1000</div>
+          </div>
         </div>
         <button class="btn-primary" id="btn-next-level">次のステージへ ▶</button>
         <button class="btn-secondary" id="btn-clear-retry">もう一度遊ぶ</button>

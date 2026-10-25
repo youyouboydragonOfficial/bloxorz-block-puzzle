@@ -1,8 +1,25 @@
 // updater.js - In-App Direct APK Downloader & Installer (100% App-Contained)
 // Author: ©youyouboydragon
 
-export const CURRENT_VERSION = "v1.0.5";
+export const CURRENT_VERSION = "v1.0.6";
 export const GITHUB_REPO = "youyouboydragonOfficial/bloxorz-block-puzzle";
+
+// セマンティックバージョニング比較関数 (例: "v1.0.6" vs "v1.0.5")
+// 戻り値: v1 > v2 => 1, v1 === v2 => 0, v1 < v2 => -1
+export function compareSemver(v1, v2) {
+  if (!v1 || !v2) return 0;
+  const parse = (v) => v.toString().replace(/^v/i, '').trim().split('.').map(n => parseInt(n, 10) || 0);
+  const p1 = parse(v1);
+  const p2 = parse(v2);
+  const len = Math.max(p1.length, p2.length);
+  for (let i = 0; i < len; i++) {
+    const n1 = p1[i] || 0;
+    const n2 = p2[i] || 0;
+    if (n1 > n2) return 1;
+    if (n1 < n2) return -1;
+  }
+  return 0;
+}
 
 export class AppUpdater {
   constructor(uiElements) {
@@ -12,13 +29,15 @@ export class AppUpdater {
     this.latestRelease = null;
   }
 
-  // 更新確認を開始
+  // 更新確認を開始 (forceShow: true=手動タップで必ず結果表示, false=起動時自動確認)
   async checkForUpdates(forceShow = true) {
     if (this.isChecking || this.isDownloading) return;
     this.isChecking = true;
 
-    // 1. 最低3秒間のサイバースキャン演出
-    this.showScanModal();
+    // 手動確認の場合は必ず3秒間のサイバースキャン演出を表示
+    if (forceShow) {
+      this.showScanModal();
+    }
 
     const startTime = Date.now();
     let releaseInfo = null;
@@ -32,23 +51,25 @@ export class AppUpdater {
       if (response.ok) {
         const data = await response.json();
         const apkAsset = data.assets?.find(a => a.name.endsWith('.apk'));
-        const exactSizeBytes = apkAsset ? apkAsset.size : 4316439;
+        const exactSizeBytes = apkAsset ? apkAsset.size : 4323091;
         const sizeMb = (exactSizeBytes / (1024 * 1024)).toFixed(2);
-        const tagVer = data.tag_name || "v1.0.4";
+        const tagVer = data.tag_name || CURRENT_VERSION;
         
-        // 直接APKバイナリのダウンロードURL
+        // バージョン比較: サーバーのバージョンが現在のアプリより新しいか？
+        const isNewer = compareSemver(tagVer, CURRENT_VERSION) > 0;
+
         const directApkUrl = apkAsset 
           ? apkAsset.browser_download_url 
           : `https://github.com/${GITHUB_REPO}/releases/download/${tagVer}/rolling-block-3d-${tagVer}.apk`;
 
         releaseInfo = {
           version: tagVer,
-          name: data.name || "Rolling Block 3D 公式アプリ内直接アップデート",
-          body: data.body || "・アプリ内完全完結の直接ダウンロード＆自動インストール機能を搭載\n・外部サイトへ飛ばされず、アプリ内で直接更新が完了します\n・ゴールを光り輝く立体床ブロックへ全面刷新\n・ゴール接触時の最優先クリア判定（落下死を完全根絶）\n・クリア演出を上空への光の昇華演出へ刷新\n・©youyouboydragon 公式アップデート",
+          name: data.name || "Rolling Block 3D 公式アップデート",
+          body: data.body || "・アプリ起動時の自動更新確認＆最新判定バグの修正\n・赤い崩壊タイルの適正化（触れたマスのみ時限崩壊）\n・1マスはみ出し耐性（バランスセーフ＆減点ペナルティ）機能\n・ホーム画面に戻るボタン及びUI全体の視認性・操作性大幅改善\n・©youyouboydragon 公式アップデート",
           downloadUrl: directApkUrl,
           sizeBytes: exactSizeBytes,
           sizeMb: sizeMb,
-          hasUpdate: true
+          hasUpdate: isNewer
         };
       } else {
         releaseInfo = this.getFallbackRelease();
@@ -58,30 +79,36 @@ export class AppUpdater {
       releaseInfo = this.getFallbackRelease();
     }
 
-    // 【要件】更新確認は早く終了しても必ず3秒間 (3000ms) 確認画面にする
+    // 手動確認の場合は最短でも必ず3秒間 (3000ms) スキャン演出を表示
     const elapsed = Date.now() - startTime;
-    const remainingTime = Math.max(0, 3000 - elapsed);
+    const remainingTime = forceShow ? Math.max(0, 3000 - elapsed) : 0;
 
     setTimeout(() => {
       this.isChecking = false;
       this.latestRelease = releaseInfo;
-      this.hideScanModal();
+      if (forceShow) {
+        this.hideScanModal();
+      }
 
-      if (releaseInfo.hasUpdate || forceShow) {
+      if (releaseInfo.hasUpdate) {
+        // 新バージョンがある場合: 更新ダイアログを表示
         this.showUpdateDialog(releaseInfo);
+      } else if (forceShow) {
+        // 手動確認で最新バージョンの場合: 「最新です」安心ダイアログを表示！
+        this.showUpToDateDialog(releaseInfo);
       }
     }, remainingTime);
   }
 
   getFallbackRelease() {
     return {
-      version: "v1.0.5",
-      name: "Rolling Block 3D 赤いタイルの時限崩壊＆連鎖崩壊 刷新アップデート",
-      body: "【改善点・新機能】\n・赤いタイルの直立時に即死せず、1.2秒間の脱出猶予（時限崩壊カウントダウン）を導入！\n・カタカタと激しく振動する崩壊前兆中、素早く次のマスへ移動すれば危機一髪脱出可能！\n・崩壊時は繋がっている赤いタイル群が一斉にガラガラと連鎖全崩落するダイナミック演出へ進化！\n・アプリ内完全完結の直接APKダウンロード＆自動インストール機能を搭載\n・ゴールを「穴」から「光輝く神聖な立体床ブロック（ゴールパッド）」に完全刷新\n・ゴール接触時の最優先クリア判定（落下死を完全根絶）\n・全1000ステージの100%解法保証 & ブロック形状切替機能（CUBE/STANDARD/LONG）\n・©youyouboydragon 公式アップデート",
-      downloadUrl: `https://github.com/${GITHUB_REPO}/releases/download/v1.0.5/rolling-block-3d-v1.0.5.apk`,
-      sizeBytes: 4325000,
+      version: CURRENT_VERSION,
+      name: "Rolling Block 3D 最新バージョン",
+      body: "お使いのアプリは最新バージョンです！更新の必要はありません。",
+      downloadUrl: `https://github.com/${GITHUB_REPO}/releases/download/${CURRENT_VERSION}/rolling-block-3d-${CURRENT_VERSION}.apk`,
+      sizeBytes: 4323091,
       sizeMb: "4.12",
-      hasUpdate: true
+      hasUpdate: false
     };
   }
 
@@ -101,6 +128,7 @@ export class AppUpdater {
     this.ui.scanModal.classList.add('hidden');
   }
 
+  // 新バージョンがあるときのダイアログ
   showUpdateDialog(info) {
     this.ui.updateModal.classList.remove('hidden');
     this.ui.updateCurrentVer.textContent = CURRENT_VERSION;
@@ -112,6 +140,25 @@ export class AppUpdater {
       .filter(line => line.trim().length > 0)
       .map(line => `<li>${line.replace(/^[・\-\*]\s*/, '')}</li>`)
       .join('');
+
+    this.ui.btnStartDownload.classList.remove('hidden');
+    this.ui.btnStartDownload.textContent = "🚀 アプリ内で最新版を直接更新";
+  }
+
+  // すでに最新バージョンだった場合の安心ダイアログ（同じものを再ダウンロードさせない！）
+  showUpToDateDialog(info) {
+    this.ui.updateModal.classList.remove('hidden');
+    this.ui.updateCurrentVer.textContent = CURRENT_VERSION;
+    this.ui.updateNewVer.textContent = `${CURRENT_VERSION} (最新)`;
+    this.ui.updateSize.textContent = "最新版適用済み";
+    
+    this.ui.updateChangelog.innerHTML = `
+      <li style="color: #00ffcc; font-weight: 700;">🎉 お使いのアプリは既に最新バージョン（${CURRENT_VERSION}）です！</li>
+      <li>新しいアップデートはありません。最新のパズルゲームをお楽しみください。</li>
+    `;
+
+    // ダウンロードボタンは非表示にし、閉じるボタンのみに
+    this.ui.btnStartDownload.classList.add('hidden');
   }
 
   hideUpdateDialog() {

@@ -174,6 +174,30 @@ class SoundManager {
     osc.stop(t + 0.05);
   }
 
+  // バランスホールド・減点ペナルティ音（ギリギリ耐えた！警告バウンス音）
+  playPenalty() {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(280, t);
+    osc.frequency.exponentialRampToValueAtTime(140, t + 0.22);
+
+    gain.gain.setValueAtTime(0.2, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.22);
+  }
+
   // アンビエントBGM（穏やかなサイバーローファイコード）
   startBgm() {
     if (this.muted || this.bgmPlaying) return;
