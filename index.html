@@ -60,44 +60,49 @@
 
     <!-- IN-GAME HUD LAYER (ゲームプレイ中のUI) -->
     <div class="ui-layer hidden" id="screen-game">
-      <!-- Top HUD -->
+      <!-- Top HUD (2段構成でスマホでも絶対に切れない高級サイバーUI) -->
       <div class="top-hud interactive">
-        <div class="hud-left">
-          <!-- 大きく押しやすいタイトルへ戻るボタン -->
-          <button class="btn-nav-home" id="btn-back-home" title="タイトル画面へ戻る">
-            <span class="btn-nav-home-icon">🏠</span>
-            <span class="btn-nav-home-text">タイトル</span>
-          </button>
-          <div class="level-info-col">
-            <div class="level-badge" id="hud-level-number">STAGE 1 / 1000</div>
-            <div class="level-name" id="hud-level-name">覚醒の道 (First Steps)</div>
+        <!-- 1段目: ナビゲーション＆ステータス -->
+        <div class="hud-row-primary">
+          <div class="hud-left">
+            <button class="btn-nav-home" id="btn-back-home" title="タイトル画面へ戻る">
+              <span class="btn-nav-home-icon">🏠</span>
+              <span class="btn-nav-home-text">タイトル</span>
+            </button>
+            <div class="level-info-col">
+              <div class="level-badge" id="hud-level-number">STAGE 1 / 1000</div>
+              <div class="level-name" id="hud-level-name">覚醒の道 (First Steps)</div>
+            </div>
+          </div>
+
+          <div class="hud-stats">
+            <div class="stat-box stat-score-box">
+              <div class="stat-label">SCORE</div>
+              <div class="stat-value text-gold" id="hud-score">1000</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">MOVES</div>
+              <div class="stat-value" id="hud-move-count">0</div>
+            </div>
           </div>
         </div>
 
-        <div class="hud-stats">
-          <div class="stat-box stat-score-box">
-            <div class="stat-label">SCORE</div>
-            <div class="stat-value text-gold" id="hud-score">1000</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-label">MOVES</div>
-            <div class="stat-value" id="hud-move-count">0</div>
-          </div>
-          <div class="stat-box interactive-stat" id="btn-change-block" title="タップしてブロック形状を切替 (救済キューブ / 標準 / ロング)">
-            <div class="stat-label">BLOCK 🔄</div>
-            <div class="stat-value" id="hud-block-type">1x1x2</div>
-          </div>
-        </div>
-
-        <div class="hud-actions">
-          <!-- 3Dプレビューモード & 正面リセット切り替えボタン -->
-          <button class="mode-toggle-btn" id="btn-toggle-mode" title="3D視点確認 / 操作切り替え">
-            <span id="mode-icon">👁</span>
-            <span id="mode-text">視点確認</span>
+        <!-- 2段目: ツール＆操作バー（画面端で絶対に切れない独立行！） -->
+        <div class="hud-row-controls">
+          <!-- 大きく押しやすい3D視点確認 / 操作切り替え大型トグルボタン -->
+          <button class="mode-toggle-btn-large" id="btn-toggle-mode" title="3D視点確認 / 操作切り替え">
+            <span class="mode-btn-icon" id="mode-icon">👁</span>
+            <span class="mode-btn-text" id="mode-text">3D視点確認</span>
           </button>
-          <button class="icon-btn" id="btn-reset-cam" title="正面アングルに戻す">🎯</button>
-          <button class="icon-btn" id="btn-restart" title="最初からリトライ (R)">🔄</button>
-          <button class="icon-btn" id="btn-game-update" title="アプリアップデート確認">⚡更新</button>
+
+          <div class="hud-btn-group">
+            <button class="icon-btn-tool" id="btn-reset-cam" title="正面アングルに戻す">🎯 正面</button>
+            <button class="icon-btn-tool" id="btn-restart" title="最初からリトライ (R)">🔄 リトライ</button>
+            <button class="icon-btn-tool stat-tool" id="btn-change-block" title="タップしてブロック形状を切替">
+              <span id="hud-block-type">1x1x2</span> 🔄
+            </button>
+            <button class="icon-btn-tool update-tool" id="btn-game-update" title="アプリアップデート確認">⚡更新</button>
+          </div>
         </div>
       </div>
 
@@ -136,6 +141,21 @@
           <button class="dpad-btn dpad-right" id="dpad-right" title="右へ転がる">▶</button>
           <button class="dpad-btn dpad-down" id="dpad-down" title="手前へ転がる">▼</button>
         </div>
+      </div>
+    </div>
+
+    <!-- GIMMICK DISCOVERY MODAL (新ギミック初登場時の自動チュートリアル) -->
+    <div class="modal-overlay hidden" id="modal-gimmick">
+      <div class="modal-card modal-card-gimmick">
+        <div class="gimmick-badge">NEW GIMMICK DISCOVERED!</div>
+        <div class="gimmick-icon-large" id="gimmick-modal-icon">🟡</div>
+        <div class="modal-title" id="gimmick-modal-title">新ギミック登場！</div>
+        <div class="gimmick-desc-box" id="gimmick-modal-desc">
+          ここにギミックの分かりやすいルールと攻略法が表示されます。
+        </div>
+        <button class="btn-primary-large" id="btn-close-gimmick" style="margin-top: 14px;">
+          <span class="btn-main-text">OK、わかった！（ステージ開始）</span>
+        </button>
       </div>
     </div>
 

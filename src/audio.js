@@ -198,6 +198,31 @@ class SoundManager {
     osc.stop(t + 0.22);
   }
 
+  // ジャンプ装置（スプリング / パルスジャンプ台）のボヨーン爽快音！
+  playJump() {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(220, t);
+    osc.frequency.exponentialRampToValueAtTime(660, t + 0.15);
+    osc.frequency.exponentialRampToValueAtTime(440, t + 0.35);
+
+    gain.gain.setValueAtTime(0.3, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.35);
+  }
+
   // アンビエントBGM（穏やかなサイバーローファイコード）
   startBgm() {
     if (this.muted || this.bgmPlaying) return;

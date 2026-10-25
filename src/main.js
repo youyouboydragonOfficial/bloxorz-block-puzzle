@@ -128,6 +128,13 @@ class App {
     this.dpadRight = document.getElementById('dpad-right');
 
     // Tutorial modal
+    // Gimmick discovery modal
+    this.modalGimmick = document.getElementById('modal-gimmick');
+    this.gimmickModalIcon = document.getElementById('gimmick-modal-icon');
+    this.gimmickModalTitle = document.getElementById('gimmick-modal-title');
+    this.gimmickModalDesc = document.getElementById('gimmick-modal-desc');
+    this.btnCloseGimmick = document.getElementById('btn-close-gimmick');
+
     this.modalTutorial = document.getElementById('modal-tutorial');
     this.tutIcon = document.getElementById('tut-icon');
     this.tutHeadline = document.getElementById('tut-headline');
@@ -235,6 +242,70 @@ class App {
     sound.startBgm();
   }
 
+  // 初登場ギミックの自動判定
+  checkGimmickTutorial(levelData) {
+    if (!levelData) return;
+
+    // 1. スイッチギミック
+    if (levelData.switches && levelData.switches.length > 0) {
+      const hasHeavy = levelData.switches.some(s => s.type === 'heavy');
+      const hasSoft = levelData.switches.some(s => s.type === 'soft');
+
+      if (hasHeavy && !localStorage.getItem('bloxorz_seen_heavy_switch')) {
+        this.showGimmickModal({
+          id: 'heavy_switch',
+          icon: '🔴',
+          title: '新ギミック登場！【重量感知ヘビースイッチ】',
+          desc: '赤い十字スイッチは、ブロックが<strong>「直立した強い重み」</strong>でのみ作動します！<br>横倒しの状態で踏んでも重さが足りず作動しないため、歩数を計算して<strong>直立</strong>で踏み込みましょう！作動すると遠くの隙間に架け橋が出現します。'
+        });
+        return;
+      }
+
+      if (hasSoft && !localStorage.getItem('bloxorz_seen_soft_switch')) {
+        this.showGimmickModal({
+          id: 'soft_switch',
+          icon: '🟡',
+          title: '新ギミック登場！【丸型スイッチ】',
+          desc: '黄色い丸型スイッチを踏むと、遠くの隙間に<strong>【光る架け橋】</strong>が出現します！<br>横倒しの状態でも、直立した状態でも、踏むだけで作動して橋が架かります。'
+        });
+        return;
+      }
+    }
+
+    // 2. ジャンプ装置ギミック (Type: 6)
+    const hasJumpPad = levelData.grid && levelData.grid.some(row => row.some(cell => cell === 6));
+    if (hasJumpPad && !localStorage.getItem('bloxorz_seen_jump_pad')) {
+      this.showGimmickModal({
+        id: 'jump_pad',
+        icon: '🦘',
+        title: '新ギミック登場！【パルスジャンプ台】',
+        desc: '緑色に光り輝くジャンプ台に乗ると、進行方向へ<strong>【放物線を描いて2マス先へ大ジャンプ】</strong>します！<br>深い隙間（穴）を一気に飛び越えて対岸の足場へ渡ることができます！'
+      });
+      return;
+    }
+
+    // 3. 赤い崩壊タイル (Type: 2)
+    const hasFragile = levelData.grid && levelData.grid.some(row => row.some(cell => cell === 2));
+    if (hasFragile && !localStorage.getItem('bloxorz_seen_fragile')) {
+      this.showGimmickModal({
+        id: 'fragile',
+        icon: '⚠️',
+        title: '新ギミック登場！【赤い崩壊タイル】',
+        desc: '赤いタイルの上に<strong>【直立】</strong>すると、カタカタと振動し2秒後にそのマスが崩落します！<br><strong>【横倒し】</strong>で通過すれば体重が分散され、一切崩れずに安全に通り抜けることができます！'
+      });
+      return;
+    }
+  }
+
+  showGimmickModal(info) {
+    if (!this.modalGimmick) return;
+    this.currentGimmickId = info.id;
+    this.gimmickModalIcon.textContent = info.icon;
+    this.gimmickModalTitle.textContent = info.title;
+    this.gimmickModalDesc.innerHTML = info.desc;
+    this.modalGimmick.classList.remove('hidden');
+  }
+
   showHomeScreen() {
     this.screenGame.classList.add('hidden');
     this.screenHome.classList.remove('hidden');
@@ -269,6 +340,9 @@ class App {
     this.hudBlockType.textContent = blockTypeLabels[levelData.blockType || "STANDARD"] || "1x1x2";
 
     this.gameScene.loadLevel(levelData);
+
+    // 【重要機能】未見ギミックの初登場時に自動チュートリアルポップアップを表示！
+    this.checkGimmickTutorial(levelData);
   }
 
   onStageClear(moves, isPerfect = true) {
@@ -343,6 +417,17 @@ class App {
       this.btnHomeSound.textContent = isMuted ? '🔇 BGM/効果音: OFF' : '🔊 BGM/効果音: ON';
       if (!isMuted) sound.startBgm();
     });
+
+    // 新ギミックポップアップの閉じるボタン
+    if (this.btnCloseGimmick) {
+      this.btnCloseGimmick.addEventListener('click', () => {
+        sound.playClick();
+        if (this.currentGimmickId) {
+          localStorage.setItem('bloxorz_seen_' + this.currentGimmickId, '1');
+        }
+        this.modalGimmick.classList.add('hidden');
+      });
+    }
 
     // ゲーム画面イベント - タイトルへ戻る（モバイルでのタッチ不発を完全防止）
     let lastHomeClick = 0;

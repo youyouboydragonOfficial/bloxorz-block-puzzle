@@ -864,6 +864,139 @@ export class GameScene {
     }
   }
 
+  // スイッチ作動判定＆橋（Bridge）のせり上がり出現
+  checkSwitches(occupied) {
+    if (!this.levelData.switches || this.isDead || this.isClear) return;
+
+    this.levelData.switches.forEach(sw => {
+      const isStepping = occupied.some(c => c.x === sw.x && c.y === sw.y);
+      if (!isStepping) return;
+
+      const isStanding = this.blockLogic.orientation === ORIENTATION.STANDING;
+
+      // ヘビースイッチは直立（強い重み）でのみ作動！
+      if (sw.type === 'heavy' && !isStanding) {
+        return;
+      }
+
+      // スイッチがまだ未作動の場合、作動させる！
+      if (!sw.active) {
+        sw.active = true;
+        sound.playSwitch();
+
+        // スイッチ押し込みアニメーション
+        const swMesh = this.switchMeshes.find(m => m.userData && m.userData.switchData === sw);
+        if (swMesh) {
+          swMesh.position.z = 0.01; // クッと押し込まれる
+          if (swMesh.material) swMesh.material.emissiveIntensity = 1.2;
+        }
+
+        // 遠くの隙間に架け橋がグググッと浮上出現！
+        const relatedBridges = this.bridgeMeshes.filter(b => b.swRef === sw);
+        relatedBridges.forEach(b => {
+          b.mesh.visible = true;
+          // グリッドを即座に通行可能な床 (1) に更新！
+          if (this.levelData.grid[b.targetY]) {
+            this.levelData.grid[b.targetY][b.targetX] = 1;
+          }
+
+          // 下方からせり上がるアニメーション
+          const startT = performance.now();
+          const duration = 500;
+          const animBridge = (now) => {
+            const elapsed = now - startT;
+            const progress = Math.min(elapsed / duration, 1.0);
+            const ease = 1 - Math.pow(1 - progress, 3);
+            b.mesh.position.z = -1.5 + ease * 1.375; // -0.125 に着地
+            if (progress < 1.0) {
+              requestAnimationFrame(animBridge);
+            }
+          };
+          requestAnimationFrame(animBridge);
+        });
+
+        if (this.callbacks.onSwitchActivated) {
+          this.callbacks.onSwitchActivated(sw);
+        }
+      }
+    });
+  }
+
+  // ジャンプ装置（スプリング / JUMP PAD）による放物線大ジャンプ！
+  triggerJumpPad() {
+    this.isJumping = true;
+    sound.playJump();
+
+    const dx = this.lastRollDx || 1;
+    const dy = this.lastRollDy || 0;
+
+    // 2マス先へ跳躍
+    const curPos = this.blockLogic.getCenterWorld();
+    const jumpDistance = 2;
+    const targetCenterX = curPos.cx + dx * jumpDistance;
+    const targetCenterY = curPos.cy + dy * jumpDistance;
+
+    const startT = performance.now();
+    const duration = 480;
+
+    // ジャンプ台の押し込み＆バウンスアニメーション
+    const jumpMesh = this.jumpPadMeshes.find(m => {
+      const occ = this.blockLogic.getOccupiedCells();
+      return occ.some(c => c.x === m.userData.gx && c.y === m.userData.gy);
+    });
+
+    if (jumpMesh) {
+      jumpMesh.position.z = -0.04;
+      setTimeout(() => { if (jumpMesh) jumpMesh.position.z = 0.03; }, 180);
+    }
+
+    const startX = curPos.cx;
+    const startY = curPos.cy;
+    const startZ = curPos.cz;
+
+    const jumpAnim = (now) => {
+      const elapsed = now - startT;
+      const progress = Math.min(elapsed / duration, 1.0);
+
+      // 放物線（山なりアーチ）
+      const arch = Math.sin(progress * Math.PI) * 2.2;
+      const curX = startX + (targetCenterX - startX) * progress;
+      const curY = startY + (targetCenterY - startY) * progress;
+      const curZ = startZ + arch;
+
+      if (this.blockMesh) {
+        this.blockMesh.position.set(curX, curY, curZ);
+        // 空中スピン演出
+        if (dx !== 0) this.blockMesh.rotation.y = progress * Math.PI * 2 * Math.sign(dx);
+        if (dy !== 0) this.blockMesh.rotation.x = progress * Math.PI * 2 * Math.sign(dy);
+      }
+
+      if (progress < 1.0) {
+        requestAnimationFrame(jumpAnim);
+      } else {
+        // 着地
+        this.isJumping = false;
+        // ブロック論理位置を2マス先へ移動
+        this.blockLogic.applyRoll(
+          this.blockLogic.x + dx * jumpDistance,
+          this.blockLogic.y + dy * jumpDistance,
+          this.blockLogic.orientation
+        );
+        this.updateBlockMeshInstant();
+
+        // 着地音＆着地判定
+        sound.playRoll(this.blockLogic.orientation === ORIENTATION.STANDING);
+        this.checkLandState();
+
+        if (this.callbacks.onJump) {
+          this.callbacks.onJump();
+        }
+      }
+    };
+
+    requestAnimationFrame(jumpAnim);
+  }
+
   triggerFall() {
     this.isDead = true;
     sound.playFall();
