@@ -2,7 +2,7 @@
 // Author: ©youyouboydragon
 
 import { GameScene } from './game.js';
-import { generateLevel } from './levels.js';
+import { generateLevel, solveLevelBFS } from './levels.js';
 import { sound } from './audio.js';
 import { AppUpdater } from './updater.js';
 
@@ -114,6 +114,12 @@ class App {
     this.btnToggleMode = document.getElementById('btn-toggle-mode');
     this.modeIcon = document.getElementById('mode-icon');
     this.modeText = document.getElementById('mode-text');
+    this.btnUndo = document.getElementById('btn-undo');
+    this.btnHint = document.getElementById('btn-hint');
+    this.bannerHintGuide = document.getElementById('banner-hint-guide');
+    this.hintMainText = document.getElementById('hint-main-text');
+    this.hintSubText = document.getElementById('hint-sub-text');
+    this.hintTimer = null;
     this.btnResetCam = document.getElementById('btn-reset-cam');
     this.btnRestart = document.getElementById('btn-restart');
     this.btnGameUpdate = document.getElementById('btn-game-update');
@@ -296,16 +302,83 @@ class App {
       return;
     }
 
-    // 3. 赤い崩壊タイル (Type: 2)
-    const hasFragile = levelData.grid && levelData.grid.some(row => row.some(cell => cell === 2));
-    if (hasFragile && !localStorage.getItem('bloxorz_seen_fragile')) {
+    // 4. 氷の床 (Type: 9)
+    const hasIce = levelData.grid && levelData.grid.some(row => row.some(cell => cell === 9));
+    if (hasIce && !localStorage.getItem('bloxorz_seen_ice')) {
       this.showGimmickModal({
-        id: 'fragile',
-        icon: '⚠️',
-        title: '新ギミック登場！【赤い崩壊タイル】',
-        desc: '赤いタイルの上に<strong>【直立】</strong>すると、カタカタと振動し2秒後にそのマスが崩落します！<br><strong>【横倒し】</strong>で通過すれば体重が分散され、一切崩れずに安全に通り抜けることができます！'
+        id: 'ice',
+        icon: '🧊',
+        title: '新ギミック登場！【氷の床 (スリップゾーン)】',
+        desc: '滑らかな氷の床に乗ると、通常床や壁に当たるまで<strong>【一気に同じ方向へスライド】</strong>します！<br>滑りすぎによる落下に注意してコース取りを計算しましょう！'
       });
       return;
+    }
+
+    // 5. 特殊ブロック形状
+    if (levelData.blockType === 'CUBE' && !localStorage.getItem('bloxorz_seen_cube')) {
+      this.showGimmickModal({
+        id: 'cube',
+        icon: '🎲',
+        title: '特殊ブロック登場！【1x1x1 キューブ】',
+        desc: '小回りの利くサイコロ型キューブです！<br>倒れる向きがなく、1マスの細い通路でも<strong>絶対に落ちることなく自由に歩行</strong>できます！'
+      });
+      return;
+    }
+
+    if (levelData.blockType === 'LONG' && !localStorage.getItem('bloxorz_seen_long')) {
+      this.showGimmickModal({
+        id: 'long',
+        icon: '🏛',
+        title: '超難関ブロック登場！【1x1x3 ロングピラー】',
+        desc: '3マス分の長さを誇る巨塔ブロックです！<br>横倒しの際は3マスの広大な足場を要求される超難関パズル！慎重に姿勢を見極めましょう！'
+      });
+      return;
+    }
+  }
+
+  showHint() {
+    sound.playClick();
+    if (!this.gameScene || !this.gameScene.levelData) return;
+
+    const curLevelState = {
+      spawn: { x: this.gameScene.blockLogic.x, y: this.gameScene.blockLogic.y },
+      goal: this.gameScene.levelData.goal,
+      blockType: this.gameScene.blockLogic.blockType,
+      grid: this.gameScene.levelData.grid,
+      switches: this.gameScene.levelData.switches
+    };
+
+    const sol = solveLevelBFS(curLevelState);
+    if (sol && sol.length > 0) {
+      const nextMove = sol[0];
+      const dirNames = {
+        U: '▲ 奥 (UP / W)',
+        D: '▼ 手前 (DOWN / S)',
+        L: '◀ 左 (LEFT / A)',
+        R: '▶ 右 (RIGHT / D)'
+      };
+      const text = dirNames[nextMove] || nextMove;
+
+      if (this.bannerHintGuide && this.hintMainText) {
+        this.hintMainText.textContent = `次は【${text}】へ転がす！`;
+        this.hintSubText.textContent = `最短ゴールまであと ${sol.length} 手`;
+        this.bannerHintGuide.classList.remove('hidden');
+
+        if (this.hintTimer) clearTimeout(this.hintTimer);
+        this.hintTimer = setTimeout(() => {
+          if (this.bannerHintGuide) this.bannerHintGuide.classList.add('hidden');
+        }, 3200);
+      }
+    } else {
+      if (this.bannerHintGuide && this.hintMainText) {
+        this.hintMainText.textContent = '現在地からの解法が見つかりません';
+        this.hintSubText.textContent = '「↩ 戻す」か「🔄 リトライ」をおすすめします';
+        this.bannerHintGuide.classList.remove('hidden');
+        if (this.hintTimer) clearTimeout(this.hintTimer);
+        this.hintTimer = setTimeout(() => {
+          if (this.bannerHintGuide) this.bannerHintGuide.classList.add('hidden');
+        }, 3000);
+      }
     }
   }
 
@@ -454,6 +527,20 @@ class App {
 
     this.btnBackHome.addEventListener('pointerdown', triggerBackHome);
     this.btnBackHome.addEventListener('click', triggerBackHome);
+
+    // 1手戻す（アンドゥ）
+    if (this.btnUndo) {
+      this.btnUndo.addEventListener('click', () => {
+        this.gameScene.undo();
+      });
+    }
+
+    // ヒント案内（最短次の一手ナビ）
+    if (this.btnHint) {
+      this.btnHint.addEventListener('click', () => {
+        this.showHint();
+      });
+    }
 
     this.btnRestart.addEventListener('click', () => {
       sound.playClick();

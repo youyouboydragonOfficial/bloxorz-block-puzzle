@@ -388,6 +388,46 @@ html, body {
   color: var(--accent-gold);
 }
 
+/* ヒント案内バナー */
+.hint-guide-banner {
+  position: absolute;
+  top: 108px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.95), rgba(255, 136, 0, 0.95));
+  border: 1.5px solid #ffffff;
+  border-radius: 20px;
+  padding: 8px 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 20px rgba(255, 170, 0, 0.6);
+  z-index: 100;
+  pointer-events: auto;
+  animation: bannerBounce 0.3s ease;
+}
+
+.hint-icon {
+  font-size: 20px;
+}
+
+.hint-text-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.hint-main {
+  font-size: 13px;
+  font-weight: 800;
+  color: #1a0f00;
+}
+
+.hint-sub {
+  font-size: 10px;
+  font-weight: 600;
+  color: #3d2600;
+}
+
 /* 新ギミック発見モーダルのスタイル */
 .modal-card-gimmick {
   max-width: 420px;

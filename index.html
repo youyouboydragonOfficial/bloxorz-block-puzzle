@@ -96,6 +96,8 @@
           </button>
 
           <div class="hud-btn-group">
+            <button class="icon-btn-tool" id="btn-undo" title="1手戻す (Z)">↩ 戻す</button>
+            <button class="icon-btn-tool" id="btn-hint" title="次の一手ヒント">💡 ヒント</button>
             <button class="icon-btn-tool" id="btn-reset-cam" title="正面アングルに戻す">🎯 正面</button>
             <button class="icon-btn-tool" id="btn-restart" title="最初からリトライ (R)">🔄 リトライ</button>
             <button class="icon-btn-tool stat-tool" id="btn-change-block" title="タップしてブロック形状を切替">
@@ -103,6 +105,15 @@
             </button>
             <button class="icon-btn-tool update-tool" id="btn-game-update" title="アプリアップデート確認">⚡更新</button>
           </div>
+        </div>
+      </div>
+
+      <!-- ヒント案内バナー -->
+      <div class="hint-guide-banner hidden" id="banner-hint-guide">
+        <span class="hint-icon">💡</span>
+        <div class="hint-text-group">
+          <span class="hint-main" id="hint-main-text">次の一手ガイド</span>
+          <span class="hint-sub" id="hint-sub-text">最短ルートの方向を表示しています</span>
         </div>
       </div>
 

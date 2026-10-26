@@ -1,7 +1,7 @@
 // updater.js - In-App Direct APK Downloader & Installer (100% App-Contained)
 // Author: ©youyouboydragon
 
-export const CURRENT_VERSION = "v1.0.8";
+export const CURRENT_VERSION = "v1.0.9";
 export const GITHUB_REPO = "youyouboydragonOfficial/bloxorz-block-puzzle";
 
 // セマンティックバージョニング比較関数 (例: "v1.0.6" vs "v1.0.5")
