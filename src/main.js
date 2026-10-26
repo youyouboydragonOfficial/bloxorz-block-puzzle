@@ -284,6 +284,18 @@ class App {
       return;
     }
 
+    // 3. ワープポータルギミック (Type: 7 & 8)
+    const hasPortal = levelData.grid && levelData.grid.some(row => row.some(cell => cell === 7 || cell === 8));
+    if (hasPortal && !localStorage.getItem('bloxorz_seen_portal')) {
+      this.showGimmickModal({
+        id: 'portal',
+        icon: '🌀',
+        title: '新ギミック登場！【異次元ワープポータル】',
+        desc: '渦巻く光のポータルホールに<strong>【直立】</strong>で乗ると、遠く離れた対のポータルへ一瞬で<strong>【瞬間移動】</strong>します！<br>離れた浮島や孤島を行き来してゴールを目指しましょう！'
+      });
+      return;
+    }
+
     // 3. 赤い崩壊タイル (Type: 2)
     const hasFragile = levelData.grid && levelData.grid.some(row => row.some(cell => cell === 2));
     if (hasFragile && !localStorage.getItem('bloxorz_seen_fragile')) {

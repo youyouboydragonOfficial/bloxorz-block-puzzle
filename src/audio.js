@@ -223,6 +223,30 @@ class SoundManager {
     osc.stop(t + 0.35);
   }
 
+  // ワープポータル（異次元瞬間移動音）
+  playWarp() {
+    if (this.muted) return;
+    this.init();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(320, t);
+    osc.frequency.exponentialRampToValueAtTime(1280, t + 0.3);
+
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start(t);
+    osc.stop(t + 0.35);
+  }
+
   // アンビエントBGM（穏やかなサイバーローファイコード）
   startBgm() {
     if (this.muted || this.bgmPlaying) return;

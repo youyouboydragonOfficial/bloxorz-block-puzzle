@@ -63,6 +63,33 @@ export function solveLevelWithSwitches(lvl, blockType = null) {
       }
       if (!valid) continue;
 
+      let nextX = r.nextX;
+      let nextY = r.nextY;
+      let nextOri = r.nextOrientation;
+
+      // ジャンプ台 (6) シミュレーション
+      const onJump = nextOcc.some(c => cur.grid[c.y]?.[c.x] === 6);
+      if (onJump) {
+        nextX += dx * 2;
+        nextY += dy * 2;
+      }
+
+      // ワープポータル (7/8) シミュレーション
+      const onPortal = nextOcc.some(c => cur.grid[c.y]?.[c.x] === 7 || cur.grid[c.y]?.[c.x] === 8);
+      if (onPortal && nextOri === ORIENTATION.STANDING) {
+        const curType = cur.grid[nextOcc[0].y][nextOcc[0].x];
+        const destType = curType === 7 ? 8 : 7;
+        for (let py = 0; py < cur.grid.length; py++) {
+          for (let px = 0; px < cur.grid[0].length; px++) {
+            if (cur.grid[py][px] === destType) {
+              nextX = px;
+              nextY = py;
+              break;
+            }
+          }
+        }
+      }
+
       // スイッチ作動のシミュレーション
       let nextGrid = cur.grid;
       if (lvl.switches) {
@@ -86,9 +113,9 @@ export function solveLevelWithSwitches(lvl, blockType = null) {
       }
 
       const nextState = {
-        x: r.nextX,
-        y: r.nextY,
-        ori: r.nextOrientation,
+        x: nextX,
+        y: nextY,
+        ori: nextOri,
         grid: nextGrid,
         path: [...cur.path, name]
       };

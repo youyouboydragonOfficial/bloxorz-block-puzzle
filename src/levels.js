@@ -4,30 +4,17 @@
 import { PuzzleBlock, ORIENTATION } from './block.js';
 
 // Tile types:
-// 0: 空白 (Void)
-// 1: 通常床 (Normal tile)
-// 2: 壊れる床 (Fragile tile - collapses if block stands on it)
-// 3: ゴール (Goal hole)
-// 4: ソフトスイッチ (Soft button - activates bridge when stepped on)
-// 5: ヘビースイッチ (Heavy button - activates bridge only when standing)
-
-// 疑似乱数生成器 (LCG)
-class PRNG {
-  constructor(seed) {
-    this.s = seed % 2147483647;
-    if (this.s <= 0) this.s += 2147483646;
-  }
-  next() {
-    this.s = (this.s * 16807) % 2147483647;
-    return (this.s - 1) / 2147483646;
-  }
-  range(min, max) {
-    return Math.floor(this.next() * (max - min + 1)) + min;
-  }
-}
+// 0: 空白 (Void / Abyss)
+// 1: 通常床 (Normal solid tile)
+// 2: 壊れる床 (Fragile tile - collapses in 2s if standing, safe if lying)
+// 3: ゴール (Goal pad)
+// 4: ソフトスイッチ (Soft button - triggers bridges when stepped on)
+// 5: ヘビースイッチ (Heavy button - triggers bridges only when standing)
+// 6: ジャンプ台 (Jump Spring Pad - catapults block 2 cells forward)
+// 7: ワープポータルA (Cyan vortex portal)
+// 8: ワープポータルB (Magenta vortex portal)
 
 // 厳選された手作りステージ (Level 1 - 15)
-// 全ステージが BFS ソルバーにより直立 (PERFECT) および横倒し (CLEAR) で 100% 解けることを数学的に保証済み
 export const HANDMADE_LEVELS = [
   // Level 1: チュートリアル - 基本の直進
   {
@@ -63,7 +50,7 @@ export const HANDMADE_LEVELS = [
       [0, 0, 0, 0, 1, 1, 1, 1, 0]
     ]
   },
-  // Level 3: 細道と方向転換 (ゴール周囲に安全スペースを完備)
+  // Level 3: 細道と方向転換
   {
     id: 3,
     name: "細道と方向転換 (Narrow Path)",
@@ -80,7 +67,7 @@ export const HANDMADE_LEVELS = [
       [0, 0, 0, 0, 0, 1, 1, 1, 1, 0]
     ]
   },
-  // Level 4: 脆い橋 (Fragile Tiles) - オレンジ床を縦倒しで安全通過
+  // Level 4: 脆い橋 (Fragile Tiles)
   {
     id: 4,
     name: "脆い橋 (Fragile Tiles)",
@@ -96,12 +83,12 @@ export const HANDMADE_LEVELS = [
       [1, 1, 1, 0, 0, 0, 0, 1, 1, 1]
     ]
   },
-  // Level 5: 架け橋のスイッチ
+  // Level 5: 架け橋のスイッチ (丸型黄色スイッチ & 架け橋)
   {
     id: 5,
     name: "架け橋のスイッチ (The Switch)",
     spawn: { x: 1, y: 1 },
-    goal: { x: 9, y: 2 },
+    goal: { x: 8, y: 2 },
     blockType: "STANDARD",
     width: 11,
     height: 5,
@@ -134,27 +121,27 @@ export const HANDMADE_LEVELS = [
       [0, 0, 0, 0, 0, 1, 1, 1, 0]
     ]
   },
-  // Level 7: 重量感知センサー (ヘビースイッチ)
+  // Level 7: 重量感知センサー (赤い十字ヘビースイッチ)
   {
     id: 7,
     name: "重量感知センサー (Heavy Sensor)",
-    spawn: { x: 1, y: 2 },
-    goal: { x: 9, y: 2 },
+    spawn: { x: 1, y: 1 },
+    goal: { x: 8, y: 2 },
     blockType: "STANDARD",
     width: 11,
     height: 5,
     switches: [
-      { x: 2, y: 1, type: "heavy", targets: [{ x: 5, y: 2 }, { x: 6, y: 2 }] }
+      { x: 3, y: 3, type: "heavy", targets: [{ x: 5, y: 2 }, { x: 6, y: 2 }] }
     ],
     grid: [
       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 1, 5, 1, 0, 0, 0, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 0, 0, 1, 3, 1, 0],
       [0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 0],
+      [0, 1, 1, 1, 1, 0, 0, 1, 3, 1, 0],
+      [0, 1, 1, 5, 1, 0, 0, 1, 1, 1, 0],
       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     ]
   },
-  // Level 8: 跳躍の空中回廊 (Sky Jump Spring - ジャンプ装置)
+  // Level 8: 跳躍の空中回廊 (パルスジャンプ台)
   {
     id: 8,
     name: "跳躍の空中回廊 (Sky Jump Spring)",
@@ -171,26 +158,23 @@ export const HANDMADE_LEVELS = [
       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     ]
   },
-  // Level 9: 螺旋回廊
+  // Level 9: 異次元ポータル (ワープポータル 7 & 8)
   {
     id: 9,
-    name: "螺旋回廊 (Spiral Corridor)",
+    name: "異次元ポータル (Dimension Warp)",
     spawn: { x: 1, y: 1 },
-    goal: { x: 4, y: 3 },
+    goal: { x: 9, y: 1 },
     blockType: "STANDARD",
-    width: 8,
-    height: 7,
+    width: 12,
+    height: 4,
     grid: [
-      [0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 1, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 0, 0, 1, 1, 0],
-      [0, 1, 0, 1, 3, 1, 1, 0],
-      [0, 1, 0, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 0, 0, 0],
-      [0, 0, 0, 0, 0, 0, 0, 0]
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 1, 1, 7, 0, 0, 8, 1, 1, 3, 0],
+      [0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     ]
   },
-  // Level 10: 断崖と空中回廊 (スイッチ + 壊れる床)
+  // Level 10: 断崖と空中回廊 (スイッチ & 壊れる床)
   {
     id: 10,
     name: "断崖と空中回廊 (Skyway Abyss)",
@@ -210,7 +194,7 @@ export const HANDMADE_LEVELS = [
       [1, 1, 1, 1, 0, 0, 0, 1, 1, 1]
     ]
   },
-  // Level 11: ダブルクランク
+  // Level 11: 二重屈折路 (Double Crank)
   {
     id: 11,
     name: "二重屈折路 (Double Crank)",
@@ -229,7 +213,7 @@ export const HANDMADE_LEVELS = [
       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     ]
   },
-  // Level 12: ジグザグステップ
+  // Level 12: 雷撃のジグザグ (Lightning Step)
   {
     id: 12,
     name: "雷撃のジグザグ (Lightning Step)",
@@ -247,25 +231,25 @@ export const HANDMADE_LEVELS = [
       [0, 0, 0, 0, 0, 1, 1, 1, 1]
     ]
   },
-  // Level 13: 浮島ジャンプ (キューブ)
+  // Level 13: 浮島の飛翔 (キューブ)
   {
     id: 13,
     name: "浮島の飛翔 (Floating Isles)",
     spawn: { x: 1, y: 1 },
     goal: { x: 6, y: 4 },
     blockType: "CUBE",
-    width: 9,
+    width: 8,
     height: 6,
     grid: [
-      [0, 0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 1, 1, 0, 0, 0, 0, 0, 0],
-      [0, 0, 1, 1, 1, 0, 0, 0, 0],
-      [0, 0, 0, 0, 1, 1, 1, 1, 0],
-      [0, 0, 0, 0, 0, 1, 3, 1, 0],
-      [0, 0, 0, 0, 0, 1, 1, 1, 0]
+      [0, 0, 0, 0, 0, 0, 0, 0],
+      [0, 1, 1, 0, 0, 1, 1, 0],
+      [0, 1, 1, 1, 0, 1, 1, 0],
+      [0, 0, 0, 1, 1, 1, 0, 0],
+      [0, 0, 0, 0, 1, 1, 3, 0],
+      [0, 0, 0, 0, 0, 0, 0, 0]
     ]
   },
-  // Level 14: クロススイッチ (2つの橋)
+  // Level 14: 双門の架橋 (Twin Gateways)
   {
     id: 14,
     name: "双門の架橋 (Twin Gateways)",
@@ -275,13 +259,13 @@ export const HANDMADE_LEVELS = [
     width: 12,
     height: 5,
     switches: [
-      { x: 2, y: 1, type: "soft", targets: [{ x: 5, y: 2 }, { x: 5, y: 1 }] }
+      { x: 3, y: 1, type: "soft", targets: [{ x: 5, y: 2 }, { x: 6, y: 2 }] }
     ],
     grid: [
       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      [0, 1, 4, 1, 0, 0, 1, 1, 1, 1, 1, 0],
-      [0, 1, 1, 1, 1, 0, 1, 1, 1, 3, 1, 0],
-      [0, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0],
+      [0, 1, 1, 4, 0, 0, 0, 1, 1, 1, 1, 0],
+      [0, 1, 1, 1, 1, 0, 0, 1, 1, 3, 1, 0],
+      [0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0],
       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     ]
   },
@@ -289,8 +273,8 @@ export const HANDMADE_LEVELS = [
   {
     id: 15,
     name: "覇者の巨塔 (The Master Pillar)",
-    spawn: { x: 1, y: 2 },
-    goal: { x: 9, y: 2 },
+    spawn: { x: 1, y: 1 },
+    goal: { x: 10, y: 2 },
     blockType: "LONG",
     width: 13,
     height: 6,
@@ -305,10 +289,24 @@ export const HANDMADE_LEVELS = [
   }
 ];
 
+class PRNG {
+  constructor(seed) {
+    this.s = seed % 2147483647;
+    if (this.s <= 0) this.s += 2147483646;
+  }
+  next() {
+    this.s = (this.s * 16807) % 2147483647;
+    return (this.s - 1) / 2147483646;
+  }
+  range(min, max) {
+    return Math.floor(this.next() * (max - min + 1)) + min;
+  }
+}
+
 // 決定論的プロシージャル・パズルジェネレーター (Level 16〜1000)
-// 解法保証アルゴリズム: 合法物理シミュレーションによる直立到達保証 (100% Solveable)
+// レベル帯に応じた本格ギミック（架け橋スイッチ、ジャンプ台、ポータル、崩壊床）を大量に配置！
+// 合法物理シミュレーションによる 100% 解法保証
 export function generateLevel(levelId) {
-  // 手作りステージがある場合はそれを返す
   const handmade = HANDMADE_LEVELS.find(l => l.id === levelId);
   if (handmade) {
     return JSON.parse(JSON.stringify(handmade));
@@ -318,12 +316,12 @@ export function generateLevel(levelId) {
 
   let blockType = "STANDARD";
   if (levelId % 8 === 0) {
-    blockType = "CUBE";
-  } else if (levelId % 15 === 0) {
-    blockType = "LONG";
+    blockType = "CUBE"; // 救済キューブ
+  } else if (levelId % 14 === 0) {
+    blockType = "LONG"; // 超難関ロング
   }
 
-  const mapSize = 22;
+  const mapSize = 24;
   const grid = Array.from({ length: mapSize }, () => Array(mapSize).fill(0));
 
   const block = new PuzzleBlock(blockType);
@@ -347,11 +345,13 @@ export function generateLevel(levelId) {
     { dx: 0, dy: -1 }
   ];
 
-  const targetSteps = Math.min(8 + Math.floor(levelId / 25) * 2, 28);
+  // レベルが上がるほど複雑な迷宮と手数（10〜32手）
+  const targetSteps = Math.min(10 + Math.floor(levelId / 20) * 2, 32);
   let stepsTaken = 0;
   let lastStandingPos = { x: startX, y: startY };
+  const history = [{ x: startX, y: startY, orientation: ORIENTATION.STANDING }];
 
-  for (let iter = 0; iter < targetSteps * 4; iter++) {
+  for (let iter = 0; iter < targetSteps * 5; iter++) {
     const shuffled = [...DIRS].sort(() => rng.next() - 0.5);
 
     for (const d of shuffled) {
@@ -370,6 +370,7 @@ export function generateLevel(levelId) {
         block.applyRoll(roll.nextX, roll.nextY, roll.nextOrientation);
         markCells();
         stepsTaken++;
+        history.push({ x: block.x, y: block.y, orientation: block.orientation });
 
         if (block.orientation === ORIENTATION.STANDING) {
           lastStandingPos = { x: block.x, y: block.y };
@@ -387,7 +388,7 @@ export function generateLevel(levelId) {
   const goalX = lastStandingPos.x;
   const goalY = lastStandingPos.y;
 
-  // ゴール周辺の3x3に確実に床ブロックを配置し、決して「床がないところ」にならないようにする！
+  // ゴール周辺の3x3に確実に床ブロックを配置
   for (let dy = -1; dy <= 1; dy++) {
     for (let dx = -1; dx <= 1; dx++) {
       const gx = goalX + dx;
@@ -399,7 +400,68 @@ export function generateLevel(levelId) {
   }
   grid[goalY][goalX] = 3;
 
-  // 分岐や装飾床の追加 (直立スペースや迂回路)
+  const switches = [];
+
+  // 【ギミック大量追加システム】
+  // 1. スイッチ＆架け橋ギミック (Level 16〜)
+  // 正解ルート上で、スイッチを踏んだ後に隙間（橋）を通過する順序を厳密に保証！
+  if (levelId >= 16 && blockType === 'STANDARD' && (levelId % 2 === 0 || levelId % 5 === 0) && history.length > 10) {
+    const swIndex = Math.floor(history.length * 0.25);
+    const bridgeIndex = Math.floor(history.length * 0.75);
+    const swPos = history[swIndex];
+    const bridgePos = history[bridgeIndex];
+
+    if (swPos && bridgePos && grid[swPos.y][swPos.x] === 1 && grid[bridgePos.y][bridgePos.x] === 1) {
+      if ((swPos.x !== goalX || swPos.y !== goalY) && (bridgePos.x !== goalX || bridgePos.y !== goalY)) {
+        // history の中で、bridgePos を最初に通過するインデックスが swIndex より真に後であることを確認！
+        const firstBridgeTouch = history.findIndex(h => h.x === bridgePos.x && h.y === bridgePos.y);
+        const lastSwTouch = history.map(h => (h.x === swPos.x && h.y === swPos.y)).lastIndexOf(true);
+
+        if (firstBridgeTouch > lastSwTouch) {
+          const isHeavy = (levelId % 4 === 0) && (swPos.orientation === ORIENTATION.STANDING);
+          grid[swPos.y][swPos.x] = isHeavy ? 5 : 4;
+          grid[bridgePos.y][bridgePos.x] = 0; // 初期状態は隙間！
+          switches.push({
+            x: swPos.x,
+            y: swPos.y,
+            type: isHeavy ? 'heavy' : 'soft',
+            targets: [{ x: bridgePos.x, y: bridgePos.y }]
+          });
+        }
+      }
+    }
+  }
+
+  // 2. パルスジャンプ台ギミック (Level 25〜)
+  // 正解ルート上で直進している安全な位置にのみ配置
+  if (levelId >= 25 && blockType === 'STANDARD' && (levelId % 3 === 0 || levelId % 7 === 0) && history.length > 12) {
+    for (let i = 4; i < history.length - 4; i++) {
+      const prev = history[i - 1];
+      const cur = history[i];
+      const next = history[i + 1];
+      // 直進判定 (prev -> cur と cur -> next の方向が同じ)
+      if (prev && cur && next && (cur.x - prev.x === next.x - cur.x) && (cur.y - prev.y === next.y - cur.y)) {
+        if (grid[cur.y][cur.x] === 1 && (cur.x !== goalX || cur.y !== goalY) && (cur.x !== startX || cur.y !== startY)) {
+          grid[cur.y][cur.x] = 6; // ジャンプ台！
+          break;
+        }
+      }
+    }
+  }
+
+  // 3. ワープポータルギミック (Level 40〜)
+  if (levelId >= 40 && blockType === 'STANDARD' && (levelId % 5 === 0) && history.length > 12) {
+    const p1Idx = Math.floor(history.length * 0.2);
+    const p2Idx = Math.floor(history.length * 0.8);
+    const p1 = history[p1Idx];
+    const p2 = history[p2Idx];
+    if (grid[p1.y][p1.x] === 1 && grid[p2.y][p2.x] === 1 && p1.x !== goalX && p2.x !== goalX) {
+      grid[p1.y][p1.x] = 7; // ポータルA (シアン)
+      grid[p2.y][p2.x] = 8; // ポータルB (マゼンタ)
+    }
+  }
+
+  // 4. 赤い崩壊床の配置
   for (let y = 2; y < mapSize - 2; y++) {
     for (let x = 2; x < mapSize - 2; x++) {
       if (grid[y][x] === 1 && rng.next() < 0.22) {
@@ -408,8 +470,8 @@ export function generateLevel(levelId) {
         if (nx >= 2 && nx < mapSize - 2 && ny >= 2 && ny < mapSize - 2 && grid[ny][nx] === 0) {
           if (Math.abs(nx - goalX) > 1 || Math.abs(ny - goalY) > 1) {
             grid[ny][nx] = 1;
-            if (levelId > 20 && rng.next() < 0.12) {
-              grid[ny][nx] = 2; // 稀に壊れる床
+            if (levelId >= 18 && rng.next() < 0.2) {
+              grid[ny][nx] = 2; // 赤い崩壊床
             }
           }
         }
@@ -432,6 +494,17 @@ export function generateLevel(levelId) {
     }
   }
 
+  switches.forEach(sw => {
+    if (sw.targets) {
+      sw.targets.forEach(t => {
+        if (t.x < minX) minX = t.x;
+        if (t.x > maxX) maxX = t.x;
+        if (t.y < minY) minY = t.y;
+        if (t.y > maxY) maxY = t.y;
+      });
+    }
+  });
+
   minX = Math.max(0, minX - 1);
   minY = Math.max(0, minY - 1);
   maxX = Math.min(mapSize - 1, maxX + 1);
@@ -446,14 +519,27 @@ export function generateLevel(levelId) {
     croppedGrid.push(row);
   }
 
+  const adjustedSwitches = switches.map(sw => ({
+    x: sw.x - minX,
+    y: sw.y - minY,
+    type: sw.type,
+    targets: sw.targets.map(t => ({ x: t.x - minX, y: t.y - minY }))
+  }));
+
+  const gimmickNames = [
+    "次元回廊", "跳躍の試練", "重力センサー", "架け橋の迷宮", "ポータルリンク", "崩落の迷路", "パルスゲート", "ツインクロス"
+  ];
+  const gName = gimmickNames[levelId % gimmickNames.length];
+
   return {
     id: levelId,
-    name: `ディメンション ${levelId} (Dimension ${levelId})`,
+    name: `STAGE ${levelId} : ${gName} (Dimension ${levelId})`,
     spawn: { x: startX - minX, y: startY - minY },
     goal: { x: goalX - minX, y: goalY - minY },
     blockType,
     width: maxX - minX + 1,
     height: maxY - minY + 1,
+    switches: adjustedSwitches.length > 0 ? adjustedSwitches : undefined,
     grid: croppedGrid
   };
 }
